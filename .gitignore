@@ -1,5 +1,6 @@
 data/
-build/
-devel/
+*build/
+*devel/
 .catkin_tools/
 logs/
+kalibr/

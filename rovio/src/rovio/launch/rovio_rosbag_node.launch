@@ -4,9 +4,9 @@
   <param name="filter_config" value="$(find rovio)/cfg/rovio.info"/>
   <param name="camera0_config" value="$(find rovio)/cfg/euroc_cam0.yaml"/>
   <param name="camera1_config" value="$(find rovio)/cfg/euroc_cam1.yaml"/>
-  <param name="rosbag_filename" value="/home/oveggeland/Desktop/master_project/data/imu_april.bag"/>
-  <param name="imu_topic_name" value="/imu0"/>
-  <param name="cam0_topic_name" value="/cam0/image_raw"/>
+  <param name="rosbag_filename" value="/home/oveggeland/my_first_bag_2021-11-11-21-20-48.bag"/>
+  <param name="imu_topic_name" value="/imu_acc_ar"/>
+  <param name="cam0_topic_name" value="/cam0/cam0"/>
   <param name="cam1_topic_name" value="/cam1/image_raw"/>
   </node>
 </launch>
