@@ -3,7 +3,7 @@
 # file was created in /usr/share/cmake-3.16/Modules (depending on the CMAKE_ROOT variable).
 
 set(LWF_INCLUDE_DIRS
-/home/oveggeland/Desktop/master_project/install/include/LWF/include
+/home/oveggeland/Desktop/master_project/rovio/install/include/LWF/include
 )
 set(LWF_FOUND TRUE)
-message("-- LWF found (include: /home/oveggeland/Desktop/master_project/install/include/LWF/include)")
+message("-- LWF found (include: /home/oveggeland/Desktop/master_project/rovio/install/include/LWF/include)")
