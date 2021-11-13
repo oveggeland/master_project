@@ -4,3 +4,4 @@ data/
 .catkin_tools/
 logs/
 kalibr/
+.vscode/
