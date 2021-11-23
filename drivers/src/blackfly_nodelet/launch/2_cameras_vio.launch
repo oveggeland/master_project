@@ -11,9 +11,9 @@
     <rosparam param="camera_info_paths">["package://blackfly/camera_info/cam_1.info"," "]</rosparam>
 
     <!-- Publish Mono Images Flag : True = Mono8, False = BGR8 -->
-    <rosparam param="mono_flags">[false, true]</rosparam>
+    <rosparam param="mono_flags">[true, true]</rosparam>
     <!-- Is the camera triggered? True = Line0, False = FrameRate -->
-    <rosparam param="is_triggered_flags">[True, false]</rosparam>
+    <rosparam param="is_triggered_flags">[False, True]</rosparam>
     <!-- Frame Rate if not triggered-->
     <rosparam param="fps">[20.0, 20.0]</rosparam>
 
@@ -47,6 +47,7 @@
     <rosparam param="auto_exposure_priority">       [0,0]</rosparam>
     <!-- Enable Exposure Time Compensation -->
     <rosparam param="exp_comp_flags">     [false, false]</rosparam>
+
 
     <!-- Enable Dynamic Reconfigure -->
     <param name="enable_dyn_reconf" value="false" type="bool" />

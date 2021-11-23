@@ -4,7 +4,7 @@
 
   <node pkg="nodelet" type="nodelet" name="blackfly_nodelet" args="load blackfly/blackfly_nodelet nodelet_manager" output="screen">
     <!-- Serial Numbers of Cameras -->
-    <rosparam param="camera_serial_nums">["19292936","19061688"]</rosparam>
+    <rosparam param="camera_serial_nums">["19423300","19423295"]</rosparam>
     <!-- Names of Cameras (used for topic names, etc) -->
     <rosparam param="camera_names">["cam0", "cam1"]</rosparam>
     <!-- Paths to Camera info files -->
@@ -13,7 +13,7 @@
     <!-- Publish Mono Images Flag : True = Mono8, False = BGR8 -->
     <rosparam param="mono_flags">[true, true]</rosparam>
     <!-- Is the camera triggered? True = Line0, False = FrameRate -->
-    <rosparam param="is_triggered_flags">[false, false]</rosparam>
+    <rosparam param="is_triggered_flags">[False, True]</rosparam>
     <!-- Frame Rate if not triggered-->
     <rosparam param="fps">[20.0, 20.0]</rosparam>
 
