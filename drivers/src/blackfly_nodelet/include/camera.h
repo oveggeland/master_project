@@ -186,6 +186,10 @@ public:
 
 			m_cam_ptr->BinningHorizontal = m_cam_settings.binning;
 
+			// Set vertical flip because camera is upside down!
+			m_cam_ptr->ReverseY = true;
+			m_cam_ptr->ReverseX = true;
+
 			// set binning type 0=Average, 1=Sum
 			if (m_cam_settings.binning_mode == 0)
 			{
