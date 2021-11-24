@@ -36,7 +36,7 @@ class OpenIMU(object):
         self.communicator.close()
 
     def getdata(self, datatype):
-        readback = self.imudevice.read_untils_have_data(datatype, 3, 200)
+        readback = self.imudevice.read_untils_have_data(datatype, read_length=3, retry_times=200)
         if datatype == ('z1'):
             timeraw = (readback[0:4]) #time in ms
             time_ms = struct.unpack('I', bytes(timeraw))[0]
@@ -52,13 +52,7 @@ class OpenIMU(object):
             yrate = struct.unpack('f', bytes(yrateraw))[0]
             zrateraw = (readback[24:28]) #zrate
             zrate = struct.unpack('f', bytes(zrateraw))[0]
-            xmagraw = (readback[28:32]) #xrate
-            xmag = struct.unpack('f', bytes(xmagraw))[0]
-            ymagraw = (readback[32:36]) #yrate
-            ymag = struct.unpack('f', bytes(ymagraw))[0]
-            zmagraw = (readback[36:40]) #zrate
-            zmag = struct.unpack('f', bytes(zmagraw))[0]
-            imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate, xmag, ymag, zmag]
+            imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate]
 
 # a1 a2 packets in development
         if datatype == ('a1'):

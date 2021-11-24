@@ -38,10 +38,10 @@ if __name__ == "__main__":
     rospy.init_node("openimu_driver")
 
     pub_imu = rospy.Publisher('imu_acc_ar', Imu, queue_size=1)
-    pub_mag = rospy.Publisher('imu_mag', MagneticField, queue_size=1)
+    #pub_mag = rospy.Publisher('imu_mag', MagneticField, queue_size=1)
 
     imu_msg = Imu()             # IMU data
-    mag_msg = MagneticField()   # Magnetometer data
+    #mag_msg = MagneticField()   # Magnetometer data
     
     #rate = rospy.Rate(200)   # 200Hz
     seq = 0
@@ -71,14 +71,14 @@ if __name__ == "__main__":
         pub_imu.publish(imu_msg)
 
         # Publish magnetometer data - convert Gauss to Tesla
-        mag_msg.header.stamp = imu_msg.header.stamp
-        mag_msg.header.frame_id = frame_id
-        mag_msg.header.seq = seq
-        mag_msg.magnetic_field.x = readback[7] * convert_tesla
-        mag_msg.magnetic_field.y = readback[8] * convert_tesla
-        mag_msg.magnetic_field.z = readback[9] * convert_tesla
-        mag_msg.magnetic_field_covariance = [0,0,0,0,0,0,0,0,0]
-        pub_mag.publish(mag_msg)
+        #mag_msg.header.stamp = imu_msg.header.stamp
+        #mag_msg.header.frame_id = frame_id
+        #mag_msg.header.seq = seq
+        #mag_msg.magnetic_field.x = readback[7] * convert_tesla
+        #mag_msg.magnetic_field.y = readback[8] * convert_tesla
+        #mag_msg.magnetic_field.z = readback[9] * convert_tesla
+        #mag_msg.magnetic_field_covariance = [0,0,0,0,0,0,0,0,0]
+        #pub_mag.publish(mag_msg)
 
         seq = seq + 1
         #rate.sleep()
