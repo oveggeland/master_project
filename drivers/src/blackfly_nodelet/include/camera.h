@@ -9,6 +9,7 @@
 #include <image_transport/image_transport.h>
 #include <camera_info_manager/camera_info_manager.h>
 
+
 using namespace Spinnaker;
 
 struct camera_settings
@@ -84,7 +85,7 @@ struct camera_settings
 class blackfly_camera
 {
 public:
-	blackfly_camera(camera_settings settings, CameraPtr cam_ptr)
+	blackfly_camera(camera_settings settings, CameraPtr cam_ptr, TimeStampSynchronizer* synch_ptr)
 	{
 		// save the camera pointer and the settings object
 		m_cam_ptr = cam_ptr;
@@ -102,8 +103,8 @@ public:
 		// setup the camera
 		setup_camera();
 
-		// create event handlers
-		m_device_event_handler_ptr = new DeviceEventHandler(m_cam_ptr);
+		// create image event handler
+		m_device_event_handler_ptr = new DeviceEventHandler(m_cam_ptr, synch_ptr);
 		m_image_event_handler_ptr = new ImageEventHandler(m_cam_settings.cam_name, m_cam_ptr, &m_cam_pub, m_cam_info_mgr_ptr, m_device_event_handler_ptr, m_cam_settings.exp_comp_flag);
 
 		// register event handlers
