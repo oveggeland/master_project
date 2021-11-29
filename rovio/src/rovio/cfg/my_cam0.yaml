@@ -6,12 +6,11 @@ camera_matrix:
   rows: 3
   cols: 3
   data: [303.6276842666613, 0.0, 175.0080466323472, 0.0, 302.5748515002741, 121.0308269201445, 0.0, 0.0, 1.0]
-distortion_model: radial-tangential
+distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
-  cols: 4
-  data:  [-0.3219166699179451, 0.19669333185561716, 8.344475489027286e-05,
-    0.00017901752157336348]
+  cols: 5
+  data:  [-0.2881895268454552, 0.07848367152099538, 0.00033098362416797926, -1.4943993415664606e-05, 0]
 
 ###### Original Calibration File ######
 ## General sensor definitions.
