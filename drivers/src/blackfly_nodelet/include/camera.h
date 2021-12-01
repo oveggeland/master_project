@@ -185,8 +185,6 @@ public:
 			m_cam_ptr->BinningVertical = m_cam_settings.binning;
 			m_cam_ptr->BinningHorizontal = m_cam_settings.binning;
 
-			m_cam_ptr->BinningHorizontal = m_cam_settings.binning;
-
 			// Set vertical flip because camera is upside down!
 			m_cam_ptr->ReverseY = true;
 			m_cam_ptr->ReverseX = true;
