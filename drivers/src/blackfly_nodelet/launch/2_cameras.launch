@@ -18,12 +18,12 @@
     <rosparam param="fps">[20.0, 20.0]</rosparam>
 
     <!-- Use Auto Exposure flag -->
-    <rosparam param="is_auto_exp_flags">[true, true]</rosparam>
+    <rosparam param="is_auto_exp_flags"> [true, true]</rosparam>
     <!-- Auto Exposure Bounds if using Auto Exposure (uSecs) -->
     <rosparam param="max_auto_exp">     [30000.0, 30000.0]</rosparam>
     <rosparam param="min_auto_exp">     [50.0, 50.0]</rosparam>
     <!-- Fixed Exposure if not Auto (uSecs) -->
-    <rosparam param="fixed_exp">        [20000.0, 20000.0]</rosparam>
+    <rosparam param="fixed_exp">        [5000.0, 5000.0]</rosparam>
 
     <!-- Use Auto Gain Flag -->
     <rosparam param="auto_gains">       [true, true]</rosparam>
@@ -38,7 +38,7 @@
     <!-- Gamma setting if using Gamma Correction -->
     <rosparam param="gammas">           [1.0, 1.0]</rosparam>
     <!-- Binning Value (decimate image resolution by x) -->
-    <rosparam param="binnings">           [4, 4]</rosparam>
+    <rosparam param="binnings">           [2, 2]</rosparam>
     <!-- 0 Average / 1 Sum -->
     <rosparam param="binning_mode">       [1, 1]</rosparam>
     <!-- 0 Normal / 1 backlight / 2 Frontlight -->
