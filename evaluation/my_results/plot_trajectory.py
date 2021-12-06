@@ -31,7 +31,8 @@ def get_traj_est(filename):
     return trajectory
 
 if __name__ == "__main__":
-    files = glob.glob("/home/oveggeland/master_project/rpg_trajectory_evaluation/my_results/office_rounds/*transformed.txt")
+    folder = "big_rounds"
+    files = glob.glob("/home/oveggeland/master_project/evaluation/my_results/"+folder+"/*transformed.txt")
 
     trajectories = []
     for run in files:
@@ -54,13 +55,23 @@ if __name__ == "__main__":
         axs[1].set_title("Z-trajectory")
         axs[1].set_xlabel("Pose number")
 
-    np_traj = np.array(trajectories)
-    print(np_traj.shape)
+    gt = np.array(
+        [
+            [0, 0],
+            [0, -3],
+            [7, -3],
+            [7, 15],
+            [0, 15],
+            [0, 0]
+        ]
+    )
 
-    xy_avg = np.average([1])
+    #axs[0].plot(gt[:, 0], gt[:, 1], '--', label="Ground truth")
+    for i in range(gt.shape[0]-1):
+        axs[0].annotate("", xy=(gt[i+1, 0], gt[i+1, 1]), xytext=(gt[i, 0], gt[i, 1]), arrowprops=dict(arrowstyle="->"))
 
     axs[0].legend()
 
 
     plt.tight_layout()
-    plt.savefig("office_round_trajectories.png")
+    plt.savefig(folder+"_trajectory.png")

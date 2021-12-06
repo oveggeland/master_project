@@ -7,3 +7,4 @@ kalibr/
 .vscode/
 drivers/data_collection/
 *.pyc
+*.bag

@@ -53,7 +53,7 @@ def dcm2quat(matrix_3x3):
 
 
 if __name__ == "__main__":
-    src_file = "office_rounds/traj_4.txt"
+    src_file = "big_rounds/traj_3.txt"
 
     f = open(src_file, "r")
     lines = f.readlines()
