@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<launch>
+  <node pkg="rovio" type="rovio_rosbag_loader" name="rovio" output="screen">
+  <param name="filter_config" value="$(find rovio)/cfg/low_res.info"/>
+  <param name="camera0_config" value="$(find rovio)/cfg/cam0_low_res.yaml"/>
+  <param name="camera1_config" value="$(find rovio)/cfg/cam1_low_res.yaml"/>
+  <param name="rosbag_filename" value="/home/oveggeland/master_project/rovio/data/[low_res]office_new_pc.bag"/>
+  <param name="imu_topic_name" value="/imu_acc_ar"/>
+  <param name="cam0_topic_name" value="/cam0/cam0"/>
+  <param name="cam1_topic_name" value="/cam1/cam1"/>
+  </node>
+</launch>

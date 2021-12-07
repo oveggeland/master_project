@@ -3,7 +3,9 @@ data/
 *devel/
 .catkin_tools/
 logs/
-kalibr/
+kalibr/*.bag
 .vscode/
 drivers/data_collection/
 *.pyc
+*.bag
+evaluation/
