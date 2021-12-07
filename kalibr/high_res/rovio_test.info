@@ -17,6 +17,17 @@ Camera
   MrMC_y 0.0982193791489;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
   MrMC_z -0.0105884679468;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
+Camera
+{
+  CalibrationFile  ;            Camera-Calibration file for intrinsics
+  qCM_x  -0.00269208305746;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.711950051265;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.702222368705;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00190317678092;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.0745029433098;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0965891144399;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.0102124103083;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+}
 Init
 {
     State

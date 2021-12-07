@@ -10,24 +10,24 @@ Common
 Camera0
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  -0.00751472712148;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.704217307393;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  -0.709926257428;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.00512072835818;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x -0.0662738435626;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0907845297813;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.0117303908626;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  0.00139353675107;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  0.711270202399;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  0.702915875563;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.0014244700225;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x -0.0697736050694;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0982193791489;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.0105884679468;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Camera1
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  -0.00326818694222;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.708413942623;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  -0.705785801059;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.00232548394295;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x 0.0721479141313;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0816395441922;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.00998381474976;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  -0.00269208305746;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.711950051265;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.702222368705;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00190317678092;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.0745029433098;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0965891144399;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.0102124103083;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Init
 {
