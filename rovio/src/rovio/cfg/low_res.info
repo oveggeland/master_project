@@ -10,24 +10,24 @@ Common
 Camera0
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  -0.00751472712148;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.704217307393;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  -0.709926257428;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.00512072835818;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x -0.0662738435626;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0907845297813;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.0117303908626;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  -0.00529060605146;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.710285072737;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.703893900528;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.000708331569871;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x -0.0728534464791;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0839855218589;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.00138802212948;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Camera1
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  -0.00326818694222;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.708413942623;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  -0.705785801059;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.00232548394295;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x 0.0721479141313;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0816395441922;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.00998381474976;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  -0.00389369215961;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.710124587782;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.704063648434;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00151259463929;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.0711795083662;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0833787578049;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.0027129669441;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Init
 {
@@ -79,8 +79,8 @@ ImgUpdate
     doFrameVisualisation true;									Should the frames be visualized
     visualizePatches false;										Should the patches be visualized
     useDirectMethod true;										Should the EKF-innovation be based on direct intensity error (o.w. reprojection error)
-    startLevel 2;												Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
-    endLevel 1;													Lowest patch level which is being employed
+    startLevel 1;												Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
+    endLevel 0;													Lowest patch level which is being employed
     nDetectionBuckets 100;										Number of discretization buckets used during the candidates selection
     MahalanobisTh 9.21;											Mahalanobis treshold for the update, 5.8858356
     UpdateNoise
