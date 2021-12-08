@@ -183,6 +183,9 @@ class RovioNode{
   std::string camera_frame_;
   std::string imu_frame_;
 
+  double cam0_offset_ = 0.0;                    //time offset added to camera 0 messages to sync with IMU images
+  double cam1_offset_ = 0.0; 
+
   /** \brief Constructor
    */
   RovioNode(ros::NodeHandle& nh, ros::NodeHandle& nh_private, std::shared_ptr<mtFilter> mpFilter)
@@ -239,6 +242,8 @@ class RovioNode{
     nh_private_.param("world_frame", world_frame_, world_frame_);
     nh_private_.param("camera_frame", camera_frame_, camera_frame_);
     nh_private_.param("imu_frame", imu_frame_, imu_frame_);
+    nh_private_.param("cam0_offset", cam0_offset_, 0.0);
+    nh_private_.param("cam1_offset", cam1_offset_, 0.0);
 
     // Initialize messages
     transformMsg_.header.frame_id = world_frame_;
@@ -504,10 +509,18 @@ class RovioNode{
       ROS_ERROR("cv_bridge exception: %s", e.what());
       return;
     }
+
+    //CUSTOMIZATION - smk: offsets for all camera frames
+    double cam_offset = 0.0;
+    if (camID == 0)
+      cam_offset = cam0_offset_;
+    else if (camID == 1)
+      cam_offset = cam1_offset_;
+
     cv::Mat cv_img;
     cv_ptr->image.copyTo(cv_img);
     if(init_state_.isInitialized() && !cv_img.empty()){
-      double msgTime = img->header.stamp.toSec();
+      double msgTime = img->header.stamp.toSec() + cam_offset;
       if(msgTime != imgUpdateMeas_.template get<mtImgMeas::_aux>().imgTime_){
         for(int i=0;i<mtState::nCam_;i++){
           if(imgUpdateMeas_.template get<mtImgMeas::_aux>().isValidPyr_[i]){
