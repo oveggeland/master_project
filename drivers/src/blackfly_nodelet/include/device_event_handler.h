@@ -8,51 +8,6 @@
 #include <deque>
 #include <mutex>
 
-class TimeStampSynchronizer 
-{
-	public:
-		// Initilization
-		TimeStampSynchronizer(int p_n_cams){
-			n_cams = p_n_cams;
-		}
-
-		// Set new time stamp TODO: Only allow one camera to do this
-		void set_time_stamp(ros::Time new_stamp){
-			synch_mutex.lock();
-
-			if (stamps_retrieved >= n_cams){
-				ROS_DEBUG("Setting new time stamp %d", new_stamp.nsec);
-				last_time_stamp = new_stamp;
-				stamps_retrieved = 0;
-			}
-			
-			synch_mutex.unlock();
-		}
-
-		// Retrieve current time stamp
-		ros::Time get_time_stamp(){
-			synch_mutex.lock();
-			
-			if (stamps_retrieved >= n_cams){
-				last_time_stamp = ros::Time(0, 0);
-				stamps_retrieved = 0;
-			}
-			else{
-				stamps_retrieved ++;
-			}
-
-			synch_mutex.unlock();
-			return last_time_stamp;
-		}
-
-	private:
-		std::mutex synch_mutex; 
-		int n_cams;
-		ros::Time last_time_stamp = ros::Time(0,0);
-		int stamps_retrieved = 0;
-};
-
-
 using namespace Spinnaker;
 using namespace Spinnaker::GenApi;
 using namespace Spinnaker::GenICam;
@@ -60,12 +15,10 @@ using namespace Spinnaker::GenICam;
 class DeviceEventHandler : public DeviceEvent
 {
 	public:
-		DeviceEventHandler(CameraPtr cam_ptr, TimeStampSynchronizer* synch_ptr)
+		DeviceEventHandler(CameraPtr cam_ptr)
 		{
 			// save the camera pointer
 			m_cam_ptr = cam_ptr;
-			// Save synch pointer
-			m_synch_ptr = synch_ptr;
 			// get the GENAPI node map
 			INodeMap &node_map = m_cam_ptr->GetNodeMap();
 			try
@@ -120,21 +73,40 @@ class DeviceEventHandler : public DeviceEvent
 		{
 			if(eventName == "EventExposureEnd")
 			{
-				// Feed frame time to synchronizer
-				m_synch_ptr->set_time_stamp(ros::Time::now());
+				// lock the mutex to prevent changes to member timestamp object
+				timestamp_mutex.lock();
+				// get the now time as the end of the exposure
+				m_last_frame_time = ros::Time::now();
+				// unlock the mutex 
+				timestamp_mutex.unlock();
 			}
 		}
 		ros::Time get_last_exposure_end()
 		{
-			// retrieve time stamp from synchronizer
-			return m_synch_ptr->get_time_stamp();
+			if(m_last_frame_time.toSec() == 0.0)
+			{
+				return ros::Time(0,0);
+			}
+			else
+			{
+				// lock the mutex to prevent changes to the member timestamp object
+				timestamp_mutex.lock();
+				// get the last frame time
+				ros::Time stamp = m_last_frame_time;
+				// assign the member timestamp to 0 to indicate it's already been reported
+				m_last_frame_time = ros::Time(0,0);
+				// unlock the mutex 
+				timestamp_mutex.unlock();
+				// return the stamp
+				return stamp;
+			}
 		}
 	private:
+		// member mutex to lock the timestamp member when is set/get
+		std::mutex timestamp_mutex; 
 		// initialize the timestamp member to 0.0 to indicate it has not been set
-		ros::Time stamp;
+		ros::Time m_last_frame_time = ros::Time(0,0);
 		// Camera pointer to spinnaker camera object (used to get the current exposure time)
 		CameraPtr m_cam_ptr;
-		// For synchronizing timestamps between cameras
-		TimeStampSynchronizer* m_synch_ptr;
 };
 #endif // DEV_EVENT_HANDLER

@@ -132,8 +132,6 @@ namespace blackfly
 			ros::shutdown();
 		}
 
-		TimeStampSynchronizer* synch_ptr = new TimeStampSynchronizer(numCameras);
-
 		for (int i = 0; i < camera_names.size(); i++)
 		{
 
@@ -166,7 +164,7 @@ namespace blackfly
 
 			ROS_DEBUG("Created Camera Settings Object");
 
-			blackfly_camera *blackfly_ptr = new blackfly_camera(settings, cam_ptr, synch_ptr);
+			blackfly_camera *blackfly_ptr = new blackfly_camera(settings, cam_ptr);
 			ROS_DEBUG("Created Camera Object");
 			m_cam_vect.push_back(blackfly_ptr);
 			ROS_INFO("Successfully launched camera : %s, Serial : %s", settings.cam_name.c_str(), camera_serials[i].c_str());
