@@ -36,7 +36,7 @@ class OpenIMU(object):
         self.communicator.close()
 
     def getdata(self, datatype):
-        readback = self.imudevice.read_untils_have_data(datatype, read_length=3, retry_times=200)
+        readback = self.imudevice.read_untils_have_data(datatype, read_length=1, retry_times=1000)
         if datatype == ('z1'):
             timeraw = (readback[0:4]) #time in ms
             time_ms = struct.unpack('I', bytes(timeraw))[0]

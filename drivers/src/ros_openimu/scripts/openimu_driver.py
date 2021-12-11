@@ -43,7 +43,7 @@ if __name__ == "__main__":
     imu_msg = Imu()             # IMU data
     #mag_msg = MagneticField()   # Magnetometer data
     
-    #rate = rospy.Rate(200)   # 200Hz
+    rate = rospy.Rate(200)   # 200Hz
     seq = 0
     frame_id = 'OpenIMU'
     convert_rads = math.pi /180
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         #pub_mag.publish(mag_msg)
 
         seq = seq + 1
-        #rate.sleep()
+        rate.sleep()
     openimu_wrp.close()         # exit
 
 
