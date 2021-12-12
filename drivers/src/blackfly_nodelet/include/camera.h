@@ -256,9 +256,6 @@ public:
 				m_cam_ptr->TriggerSource = TriggerSource_Line0;
 				m_cam_ptr->TriggerActivation = TriggerActivation_RisingEdge;
 				m_cam_ptr->TriggerMode = TriggerMode_On;
-				if (m_cam_settings.cam_sync){
-					m_cam_ptr->LineInverter = true;
-				}
 			}
 			else
 			{
