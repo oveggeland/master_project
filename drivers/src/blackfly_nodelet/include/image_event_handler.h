@@ -15,6 +15,7 @@
 
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
+#include <synchronizer/GetTimeStamp.h>
 
 #include "device_event_handler.h"
 
@@ -45,21 +46,31 @@ class ImageEventHandler : public ImageEvent
 		}
 		void OnImageEvent(ImagePtr image)
 		{
-			ros::Time image_arrival_time = ros::Time::now();
-			// get the last end of exposure envent from the device event handler (exposure time compensated)
-			ros::Time last_event_stamp = m_device_event_handler_ptr->get_last_exposure_end();
+			// --------------- Get time stamp from synchronizer node! ---------- //
+			const std::map<std::string, std::string> m_header {{"id", m_cam_name}};
+			ros::NodeHandle n;
+			ros::ServiceClient service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", false, m_header);
+			synchronizer::GetTimeStamp srv;
+			service.call(srv);
+
+			ros::Time stamp = ros::Time(srv.response.secs, srv.response.nsecs);
+			//ROS_INFO("Time: Secs %d.%d", stamp.sec, stamp.nsec);
+			// ----------------------------------------------------------------- //
+
 			ros::Time image_stamp;
-			// if the last event stamp is 0, no end of exposure event was received, assign the image arrival time instead
-			if(last_event_stamp.toSec() == 0.0)
+			// if the image stamp is 0, no end of exposure event was received, assign the image arrival time instead
+			if(stamp.toSec() == 0.0)
 			{
-				image_stamp = image_arrival_time;
-				ROS_WARN("BLACKFLY NODELET: NO EVENT STAMP ON CAMERA: %s", m_cam_name.c_str());
+				float period = 1/(float) m_cam_ptr->AcquisitionResultingFrameRate.GetValue();
+				image_stamp = m_last_image_stamp + ros::Duration(period);
+				ROS_WARN("BLACKFLY NODELET: NO EVENT STAMP ON SYNCHRONIZER: %s", m_cam_name.c_str());
 			}
 			else
 			{
-				image_stamp = last_event_stamp;
+				image_stamp = stamp;
 			}
-			// ROS_INFO("Time Diff b/w arrival time and stamp = %f mSec",  (image_arrival_time.toSec() - image_stamp.toSec()) * 1000.0);
+			m_last_image_stamp = image_stamp;
+
 			if (image->IsIncomplete())
 			{
 				ROS_ERROR("Blackfly nodelet : Image retrieval failed : image incomplete");
