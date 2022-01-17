@@ -1,0 +1,10 @@
+<launch>
+    <!-- Launch synchronizer server-->
+    <node pkg="synchronizer" name="synchronize_server" type="server.py" output="screen"> </node>
+
+    <!-- Launch openimu driver -->
+    <include file="$(find ros_openimu)/launch/openimu_driver.launch"/>
+
+    <!-- Launch cameras -->
+    <include file="$(find blackfly)/launch/1_camera.launch"/>  
+</launch>
