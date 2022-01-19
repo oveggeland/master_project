@@ -54,41 +54,49 @@ if __name__ == "__main__":
     rospy.wait_for_service('set_time_stamp')
     set_time_stamp = rospy.ServiceProxy('set_time_stamp', SetTimeStamp, persistent=True)
 
+    prev = rospy.Time(0,0)
     while not rospy.is_shutdown():
         #read the data - call the get imu measurement data
         readback = openimu_wrp.readimu()
+        if readback:
 
-        # Get time stamp from the evaluation board
-        us = readback[0]
-        ts = rospy.Time(0, us*1000)
+            # Get time stamp from the evaluation board
+            us = readback[0]
+            ts = rospy.Time(0, us*1000)
 
-        # Check if time stamp should be shared with cameras
-        cam_stamp = readback[7]
-        if cam_stamp:
-            print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
-            # Request to store on server
-            try:
-                resp = set_time_stamp(ts.secs, ts.nsecs)
-            except rospy.ServiceException as exc:
-                print("Service did not process request: " + str(exc))
+            # Check if time stamp should be shared with cameras
+            cam_stamp = readback[7]
+            if cam_stamp:
+                #print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
+                # Request to store on server
+                try:
+                    resp = set_time_stamp(ts.secs, ts.nsecs)
+                except rospy.ServiceException as exc:
+                    print("Service did not process request: " + str(exc))
 
-    
-        # Create IMU topic message
-        imu_msg.header.stamp = ts
-        imu_msg.header.frame_id = frame_id
-        imu_msg.header.seq = seq
+        
+            diff = ts - prev
+            prev = ts
+            if diff.to_nsec() > 0:
+                print("DIFF!", diff.to_nsec())
+                pass
 
-        imu_msg.orientation_covariance[0] = -1
-        imu_msg.linear_acceleration.x = readback[1]
-        imu_msg.linear_acceleration.y = readback[2]
-        imu_msg.linear_acceleration.z = readback[3]
-        imu_msg.linear_acceleration_covariance[0] = -1
-        imu_msg.angular_velocity.x = readback[4] * convert_rads
-        imu_msg.angular_velocity.y = readback[5] * convert_rads
-        imu_msg.angular_velocity.z = readback[6] * convert_rads
-        imu_msg.angular_velocity_covariance[0] = -1
+            # Create IMU topic message
+            imu_msg.header.stamp = ts
+            imu_msg.header.frame_id = frame_id
+            imu_msg.header.seq = seq
 
-        pub_imu.publish(imu_msg)
+            imu_msg.orientation_covariance[0] = -1
+            imu_msg.linear_acceleration.x = readback[1]
+            imu_msg.linear_acceleration.y = readback[2]
+            imu_msg.linear_acceleration.z = readback[3]
+            imu_msg.linear_acceleration_covariance[0] = -1
+            imu_msg.angular_velocity.x = readback[4] * convert_rads
+            imu_msg.angular_velocity.y = readback[5] * convert_rads
+            imu_msg.angular_velocity.z = readback[6] * convert_rads
+            imu_msg.angular_velocity_covariance[0] = -1
+
+            pub_imu.publish(imu_msg)
 
         seq = seq + 1
         #clk.sleep()

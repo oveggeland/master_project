@@ -254,7 +254,9 @@ def _parse_buffer(data_buffer):
     response = {
         'parsed': False,
         'parsed_end_index': 0,
-        'result': []
+        'result': [],
+        'last_bytes': False,
+        'crc_ok': False
     }
     data_queue = Queue()
     data_queue.queue.extend(data_buffer)
@@ -264,6 +266,8 @@ def _parse_buffer(data_buffer):
     is_header_found = False
     packet_type = ''
     data_buffer_len = len(data_buffer)
+    parsed_crc = []
+    header = []
 
     while not data_queue.empty():
         if is_header_found:
@@ -284,11 +288,31 @@ def _parse_buffer(data_buffer):
                     ["%c" % x for x in [packet_type_start, packet_type_end]])
                 packet_data = []
 
-                if data_queue.qsize() >= packet_len:
-                    # take packet
+                if data_queue.qsize() >= packet_len+2:
+                    # take packet with 2 bytes of CRC
                     for _ in range(packet_len):
                         packet_data.append(data_queue.get())
+                    parsed_crc = []    
+                    parsed_crc.append(data_queue.get())
+                    parsed_crc.append(data_queue.get())
+                    header = []
+                    header.append(packet_type_start)
+                    header.append(packet_type_end)
+                    header.append(packet_len)
+                    frame = header + packet_data
+                    packet_crc = calc_crc(frame)
+                    if packet_crc == parsed_crc:
+                        response['crc_ok'] = True
+                    #else:
+                       #print("CRC NO OK")     
+                    #print("GGLARIA1>>"+str(frame))    
+                    #print("GGLARIA1>>"+str(packet_crc))
+                    #print("GGLARIA2>>"+str(parsed_crc))   
                 else:
+                    #print("no all data"+str(data_queue.qsize()))
+                    if packet_len-data_queue.qsize() < 10:
+                        #print('last bytes')
+                        response['last_bytes'] = True     
                     break
                 # update response
                 response['parsed'] = True
@@ -297,8 +321,9 @@ def _parse_buffer(data_buffer):
                     'data': packet_data
                 })
                 response['parsed_end_index'] += data_buffer_len - \
-                    data_queue.qsize()
+                    data_queue.qsize()   
                 data_buffer_len = data_queue.qsize()
+                
                 parsed_data = []
                 is_header_found = False
             else:
@@ -306,7 +331,6 @@ def _parse_buffer(data_buffer):
         else:
             byte_item = data_queue.get()
             parsed_data.append(byte_item)
-
             if len(parsed_data) > 2:
                 parsed_data = parsed_data[-2:]
 
@@ -318,6 +342,7 @@ def _parse_buffer(data_buffer):
     return response
 
 
+
 def read_untils_have_data_through_serial_port(communicator, packet_type, read_length=200, retry_times=20):
     '''
     Get data from limit times of read
@@ -325,23 +350,30 @@ def read_untils_have_data_through_serial_port(communicator, packet_type, read_le
     result = None
     trys = 0
     data_buffer = []
+    read_length_copy = read_length
 
     while trys < retry_times:
         data_buffer_per_time = bytearray(
-            communicator.read(read_length))
+            communicator.read(read_length_copy))
         data_buffer.extend(data_buffer_per_time)
 
         response = _parse_buffer(data_buffer)
         if response['parsed']:
-            matched_packet = next(
-                (packet['data'] for packet in response['result']
-                 if packet['type'] == packet_type), None)
+            if response['crc_ok']:
+                matched_packet = next(
+                    (packet['data'] for packet in response['result']
+                    if packet['type'] == packet_type), None)
+            else:
+                 matched_packet = None
+                 break
+
             if matched_packet is not None:
                 result = matched_packet
             else:
                 # clear buffer to parsed index
                 data_buffer = data_buffer[response['parsed_end_index']:]
-
+        elif response['last_bytes']:
+            read_length_copy = 1
         if result is not None:
             break
 
