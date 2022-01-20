@@ -1,6 +1,6 @@
 #!/bin/sh
 
-data_dir=$1
+data_dir='/home/oveggeland/master_project/kalibr/'
 
 if [ ! -d "$data_dir" ]; then
   echo "data directory does not exist: $data_dir"
