@@ -89,11 +89,6 @@ namespace blackfly
 		bool enable_dyn_reconf;
 		pnh.getParam("enable_dyn_reconf", enable_dyn_reconf);
 
-		// enable camera synchronization
-		bool cam_sync;
-		pnh.getParam("cam_sync", cam_sync);
-
-
 		int num_cameras_listed = camera_names.size();
 		if (camera_serials.size() != num_cameras_listed ||
 			camera_info_paths.size() != num_cameras_listed ||
@@ -160,7 +155,7 @@ namespace blackfly
 			camera_settings settings(camera_names[i], camera_info_paths[i], mono_flags[i],
 									 is_triggered_flags[i], fps[i], is_auto_exp_flags[i], max_auto_exp[i], min_auto_exp[i], fixed_exp[i],
 									 auto_gain_flags[i], gains[i], max_gains[i], min_gains[i], enable_gamma[i], gammas[i],
-									 binnings[i], binning_mode[i], lighting_mode[i], auto_exposure_priority[i], exp_comp_flags[i], cam_sync);
+									 binnings[i], binning_mode[i], lighting_mode[i], auto_exposure_priority[i], exp_comp_flags[i]);
 
 			ROS_DEBUG("Created Camera Settings Object");
 

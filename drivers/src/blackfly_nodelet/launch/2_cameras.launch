@@ -13,9 +13,9 @@
     <!-- Publish Mono Images Flag : True = Mono8, False = BGR8 -->
     <rosparam param="mono_flags">[true, true]</rosparam>
     <!-- Is the camera triggered? True = Line0, False = FrameRate -->
-    <rosparam param="is_triggered_flags">[False, True]</rosparam>
+    <rosparam param="is_triggered_flags">[true, true]</rosparam>
     <!-- Frame Rate if not triggered-->
-    <rosparam param="fps">[4.0, 20.0]</rosparam>
+    <rosparam param="fps">[20.0, 20.0]</rosparam>
 
     <!-- Use Auto Exposure flag -->
     <rosparam param="is_auto_exp_flags"> [true, true]</rosparam>
@@ -46,7 +46,7 @@
     <!-- 0 Gain / 1 ExposureTime -->
     <rosparam param="auto_exposure_priority">       [0,0]</rosparam>
     <!-- Enable Exposure Time Compensation -->
-    <rosparam param="exp_comp_flags">     [true, true]</rosparam>
+    <rosparam param="exp_comp_flags">     [false, false]</rosparam>
 
 
     <!-- Enable Dynamic Reconfigure -->

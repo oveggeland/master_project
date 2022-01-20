@@ -2,6 +2,7 @@ import struct
 from ..models.args import DetectorArgs
 from ..framework.communicator import CommunicatorFactory
 from ..devices.openimu.uart_provider import Provider
+import random
 
 class OpenIMU(object):
     '''
@@ -19,7 +20,7 @@ class OpenIMU(object):
         if self.communicator is None:
             self.communicator = CommunicatorFactory.create(
                 self.communication, self.options)
-
+        
         self.communicator.find_device(callback)
 
     def _build_options(self, **kwargs):
@@ -36,7 +37,10 @@ class OpenIMU(object):
         self.communicator.close()
 
     def getdata(self, datatype):
-        readback = self.imudevice.read_untils_have_data(datatype, read_length=1, retry_times=1000)
+        readback = self.imudevice.read_untils_have_data(datatype, read_length=10, retry_times=300)
+        if not readback:
+            return None
+            
         if datatype == ('z1'):
             timeraw = (readback[0:4]) #time in ms
             time_ms = struct.unpack('I', bytes(timeraw))[0]
@@ -53,6 +57,27 @@ class OpenIMU(object):
             zrateraw = (readback[24:28]) #zrate
             zrate = struct.unpack('f', bytes(zrateraw))[0]
             imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate]
+
+        if datatype == ('o1'):
+            timeraw = (readback[0:4]) #time in ms
+            time_ms = struct.unpack('I', bytes(timeraw))[0]
+            xaccelraw = (readback[4:8]) #xaccel
+            xaccel = struct.unpack('f', bytes(xaccelraw))[0]
+            yaccelraw = (readback[8:12]) #yaccel        
+            yaccel = struct.unpack('f', bytes(yaccelraw))[0]
+            zaccelraw = (readback[12:16]) #zaccel
+            zaccel = struct.unpack('f', bytes(zaccelraw))[0]
+            xrateraw = (readback[16:20]) #xrate
+            xrate = struct.unpack('f', bytes(xrateraw))[0]
+            yrateraw = (readback[20:24]) #yrate
+            yrate = struct.unpack('f', bytes(yrateraw))[0]
+            zrateraw = (readback[24:28]) #zrate
+            zrate = struct.unpack('f', bytes(zrateraw))[0]
+            try:
+                cam_stamp = readback[28] #zrate
+            except:
+                cam_stamp = 0 
+            imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate, cam_stamp]
 
 # a1 a2 packets in development
         if datatype == ('a1'):

@@ -15,7 +15,7 @@
     <!-- Publish Mono Images Flag : True = Mono8, False = BGR8 -->
     <rosparam param="mono_flags">[false]</rosparam>
     <!-- Is the camera triggered? True = Line0, False = FrameRate -->
-    <rosparam param="is_triggered_flags">[false]</rosparam>
+    <rosparam param="is_triggered_flags">[true]</rosparam>
     <!-- Frame Rate if not triggered-->
     <rosparam param="fps">[20.0]</rosparam>
 
