@@ -63,11 +63,12 @@ class ImageEventHandler : public ImageEvent
 			{
 				float period = 1/(float) m_cam_ptr->AcquisitionResultingFrameRate.GetValue();
 				image_stamp = m_last_image_stamp + ros::Duration(period);
-				ROS_WARN("BLACKFLY NODELET: NO EVENT STAMP ON SYNCHRONIZER: %s", m_cam_name.c_str());
+				ROS_WARN("BLACKFLY NODELET: NO EVENT STAMP ON SYNCHRONIZER: %s. Time stamp %d.%d", m_cam_name.c_str(), image_stamp.sec, image_stamp.nsec);
 			}
 			else
 			{
 				image_stamp = stamp;
+				ROS_WARN("Image stamp: %d.%d", image_stamp.sec, image_stamp.nsec);
 			}
 			m_last_image_stamp = image_stamp;
 

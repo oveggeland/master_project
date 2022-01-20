@@ -67,7 +67,7 @@ if __name__ == "__main__":
             # Check if time stamp should be shared with cameras
             cam_stamp = readback[7]
             if cam_stamp:
-                #print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
+                print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
                 # Request to store on server
                 try:
                     resp = set_time_stamp(ts.secs, ts.nsecs)
@@ -78,7 +78,7 @@ if __name__ == "__main__":
             diff = ts - prev
             prev = ts
             if diff.to_nsec() > 0:
-                print("DIFF!", diff.to_nsec())
+                # print("DIFF!", diff.to_nsec())
                 pass
 
             # Create IMU topic message
