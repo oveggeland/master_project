@@ -6,6 +6,7 @@ import sys
 import math
 from time import time
 from sensor_msgs.msg import Imu
+import random
 
 try:
     from ros_openimu.src.aceinna.tools import OpenIMU
@@ -41,8 +42,8 @@ if __name__ == "__main__":
     pub_imu = rospy.Publisher('imu_acc_ar', Imu, queue_size=5)
     imu_msg = Imu()             # IMU data
         
-    rate = 200  # 200Hz
-    clk = rospy.Rate(rate)   
+    # rate = 200  # 200Hz
+    # clk = rospy.Rate(rate)   
     seq = 0
     frame_id = 'OpenIMU'
     convert_rads = math.pi /180
@@ -74,13 +75,6 @@ if __name__ == "__main__":
                 except rospy.ServiceException as exc:
                     print("Service did not process request: " + str(exc))
 
-        
-            diff = ts - prev
-            prev = ts
-            if diff.to_nsec() > 0:
-                # print("DIFF!", diff.to_nsec())
-                pass
-
             # Create IMU topic message
             imu_msg.header.stamp = ts
             imu_msg.header.frame_id = frame_id
@@ -98,8 +92,9 @@ if __name__ == "__main__":
 
             pub_imu.publish(imu_msg)
 
-        seq = seq + 1
-        #clk.sleep()
+            seq = seq + 1
+
+            #clk.sleep()
     openimu_wrp.close()         # exit
 
 
