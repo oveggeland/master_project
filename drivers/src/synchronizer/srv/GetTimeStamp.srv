@@ -1,3 +1,4 @@
+uint32 seq
 ---
 int32 secs
 int32 nsecs

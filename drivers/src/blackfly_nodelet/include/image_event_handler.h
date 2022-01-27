@@ -35,9 +35,9 @@ class ImageEventHandler : public ImageEvent
 			m_cam_pub_ptr = p_cam_pub_ptr;
 			m_c_info_mgr_ptr = p_c_info_mgr_ptr;
 			m_device_event_handler_ptr = p_device_event_handler_ptr;
-			m_last_image_stamp = ros::Time(0,0);
 			m_exp_time_comp_flag = p_exp_time_comp_flag;
 			image_msg = boost::make_shared<sensor_msgs::Image>();
+			img_count = 0;
 			// config_all_chunk_data();
 		}
 		~ImageEventHandler()
@@ -51,43 +51,41 @@ class ImageEventHandler : public ImageEvent
 			ros::NodeHandle n;
 			ros::ServiceClient service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", false, m_header);
 			synchronizer::GetTimeStamp srv;
+			srv.request.seq = img_count;
 			service.call(srv);
 
-			ros::Time stamp = ros::Time(srv.response.secs, srv.response.nsecs);
-			//ROS_INFO("Time: Secs %d.%d", stamp.sec, stamp.nsec);
+			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
+			// Wait for IMU to have posted time stamp on server
+			while (trigger_time == ros::Time(0)){
+				if (m_cam_ptr->TransferQueueCurrentBlockCount.GetValue() > 0){
+					ROS_WARN("Too much time passed, new image waiting...");
+					return;
+				}
+				service.call(srv);
+				trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
+			}
+			img_count ++;
 			// ----------------------------------------------------------------- //
 
-			ros::Time image_stamp;
-			// if the image stamp is 0, no end of exposure event was received, assign the image arrival time instead
-			if(stamp.toSec() == 0.0)
+			ros::Time image_stamp = trigger_time;
+		
+			if(m_exp_time_comp_flag)
 			{
-				float period = 1/(float) m_cam_ptr->AcquisitionResultingFrameRate.GetValue();
-				image_stamp = m_last_image_stamp + ros::Duration(period);
-				ROS_WARN("BLACKFLY NODELET: NO EVENT STAMP ON SYNCHRONIZER: %s. Time stamp %d.%d", m_cam_name.c_str(), image_stamp.sec, image_stamp.nsec);
+				// get the exposure time
+				double exp_time = double(m_cam_ptr->ExposureTime.GetValue());
+				// convert to nanoseconds
+				exp_time *= 1000.0;
+				// add half exposure time to the trigger time
+				image_stamp += ros::Duration(0, exp_time/2.0);
 			}
-			else
-			{
-				image_stamp = stamp;
-				ROS_WARN("Image stamp: %d.%d", image_stamp.sec, image_stamp.nsec);
-			}
-			m_last_image_stamp = image_stamp;
-
+			ROS_INFO("Image stamp for %s: %d.%d", m_cam_name.c_str(), image_stamp.sec, image_stamp.nsec);
+			
 			if (image->IsIncomplete())
 			{
 				ROS_ERROR("Blackfly nodelet : Image retrieval failed : image incomplete");
 				return;
 			}
-			if(m_exp_time_comp_flag)
-			{
-				// get the exposure time
-				double exp_time = double(m_cam_ptr->ExposureTime.GetValue());
-				// convert to seconds
-				exp_time /= 1000000.0;
-				// get half the exposure time
-				exp_time /= 2.0;
-				// subtract from the end of exposure time to get the middle of the exposure
-				image_stamp -= ros::Duration(exp_time);
-			}
+
 			if(m_cam_pub_ptr->getNumSubscribers() > 0)
 			{
 				int height = image->GetHeight();
@@ -191,7 +189,7 @@ class ImageEventHandler : public ImageEvent
 		boost::shared_ptr<camera_info_manager::CameraInfoManager> m_c_info_mgr_ptr;
 		image_transport::CameraPublisher *m_cam_pub_ptr;
 		std::string m_cam_name;
-		ros::Time m_last_image_stamp;
 		bool m_exp_time_comp_flag = false;
+		int img_count;
 };
 #endif //IMG_EVENT_HANDLER_

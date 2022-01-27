@@ -6,6 +6,7 @@ import sys
 import math
 from time import time
 from sensor_msgs.msg import Imu
+import random
 
 try:
     from ros_openimu.src.aceinna.tools import OpenIMU
@@ -18,8 +19,8 @@ except:  # pylint: disable=bare-except
 
 
 class OpenIMUros:
-    def __init__(self):
-        self.openimudev = OpenIMU()
+    def __init__(self, options):
+        self.openimudev = OpenIMU(**options)
         self.openimudev.startup()
 
     def close(self):
@@ -41,22 +42,26 @@ if __name__ == "__main__":
     pub_imu = rospy.Publisher('imu_acc_ar', Imu, queue_size=5)
     imu_msg = Imu()             # IMU data
         
-    rate = 200  # 200Hz
-    clk = rospy.Rate(rate)   
+    # rate = 200  # 200Hz
+    # clk = rospy.Rate(rate)   
     seq = 0
     frame_id = 'OpenIMU'
     convert_rads = math.pi /180
 
-    openimu_wrp = OpenIMUros()
+    options = {'baudrate':230400, 'filter_device_type':'IMU', 'com_port':'auto'}
+    openimu_wrp = OpenIMUros(options)
     rospy.loginfo("OpenIMU driver initialized.")
 
     # Persistent time stamp server proxy
     rospy.wait_for_service('set_time_stamp')
     set_time_stamp = rospy.ServiceProxy('set_time_stamp', SetTimeStamp, persistent=True)
+    cam_count = 0
 
     prev = rospy.Time(0,0)
     while not rospy.is_shutdown():
         #read the data - call the get imu measurement data
+
+
         readback = openimu_wrp.readimu()
         if readback:
 
@@ -70,16 +75,10 @@ if __name__ == "__main__":
                 print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
                 # Request to store on server
                 try:
-                    resp = set_time_stamp(ts.secs, ts.nsecs)
+                    resp = set_time_stamp(ts.secs, ts.nsecs, cam_count)
+                    cam_count += 1
                 except rospy.ServiceException as exc:
                     print("Service did not process request: " + str(exc))
-
-        
-            diff = ts - prev
-            prev = ts
-            if diff.to_nsec() > 0:
-                # print("DIFF!", diff.to_nsec())
-                pass
 
             # Create IMU topic message
             imu_msg.header.stamp = ts
@@ -98,8 +97,9 @@ if __name__ == "__main__":
 
             pub_imu.publish(imu_msg)
 
-        seq = seq + 1
-        #clk.sleep()
+            seq = seq + 1
+
+            #clk.sleep()
     openimu_wrp.close()         # exit
 
 

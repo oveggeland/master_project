@@ -1,4 +1,5 @@
 int32 secs
 int32 nsecs
+uint32 seq
 ---
 int8 success
