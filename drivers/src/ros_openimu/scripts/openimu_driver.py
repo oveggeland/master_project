@@ -19,8 +19,8 @@ except:  # pylint: disable=bare-except
 
 
 class OpenIMUros:
-    def __init__(self):
-        self.openimudev = OpenIMU()
+    def __init__(self, options):
+        self.openimudev = OpenIMU(**options)
         self.openimudev.startup()
 
     def close(self):
@@ -48,16 +48,20 @@ if __name__ == "__main__":
     frame_id = 'OpenIMU'
     convert_rads = math.pi /180
 
-    openimu_wrp = OpenIMUros()
+    options = {'baudrate':230400, 'filter_device_type':'IMU', 'com_port':'auto'}
+    openimu_wrp = OpenIMUros(options)
     rospy.loginfo("OpenIMU driver initialized.")
 
     # Persistent time stamp server proxy
     rospy.wait_for_service('set_time_stamp')
     set_time_stamp = rospy.ServiceProxy('set_time_stamp', SetTimeStamp, persistent=True)
+    cam_count = 0
 
     prev = rospy.Time(0,0)
     while not rospy.is_shutdown():
         #read the data - call the get imu measurement data
+
+
         readback = openimu_wrp.readimu()
         if readback:
 
@@ -71,7 +75,8 @@ if __name__ == "__main__":
                 print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
                 # Request to store on server
                 try:
-                    resp = set_time_stamp(ts.secs, ts.nsecs)
+                    resp = set_time_stamp(ts.secs, ts.nsecs, cam_count)
+                    cam_count += 1
                 except rospy.ServiceException as exc:
                     print("Service did not process request: " + str(exc))
 

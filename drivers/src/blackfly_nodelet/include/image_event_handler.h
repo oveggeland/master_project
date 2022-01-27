@@ -37,6 +37,7 @@ class ImageEventHandler : public ImageEvent
 			m_device_event_handler_ptr = p_device_event_handler_ptr;
 			m_exp_time_comp_flag = p_exp_time_comp_flag;
 			image_msg = boost::make_shared<sensor_msgs::Image>();
+			img_count = 0;
 			// config_all_chunk_data();
 		}
 		~ImageEventHandler()
@@ -50,6 +51,7 @@ class ImageEventHandler : public ImageEvent
 			ros::NodeHandle n;
 			ros::ServiceClient service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", false, m_header);
 			synchronizer::GetTimeStamp srv;
+			srv.request.seq = img_count;
 			service.call(srv);
 
 			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
@@ -62,6 +64,7 @@ class ImageEventHandler : public ImageEvent
 				service.call(srv);
 				trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
 			}
+			img_count ++;
 			// ----------------------------------------------------------------- //
 
 			ros::Time image_stamp = trigger_time;
@@ -187,5 +190,6 @@ class ImageEventHandler : public ImageEvent
 		image_transport::CameraPublisher *m_cam_pub_ptr;
 		std::string m_cam_name;
 		bool m_exp_time_comp_flag = false;
+		int img_count;
 };
 #endif //IMG_EVENT_HANDLER_
