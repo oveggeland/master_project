@@ -72,6 +72,8 @@ typedef struct {
     // here is the border between arbitrary parameters and platform configuration parameters
     //***************************************************************************************
 
+    uint8_t            cameraFlag;          /// Flag to indicate whether cameras are ready for triggering in VIO system
+
     // place new arbitrary configuration parameters here
     // parameter size should even to 8 bytes
     // Add parameter offset in UserConfigParamOffset structure if validation or
@@ -170,8 +172,9 @@ typedef enum{
     USER_LAST_SYSTEM_PARAM = USER_ORIENTATION, 
 //*****************************************************************************************
 // add parameter enumerator here while adding new parameter in user UserConfigurationStruct
-    USER_GPS_BAUD_RATE                ,   // 8
-    USER_GPS_PROTOCOL                 ,   // 9
+    USER_CAMERA_FLAG                  ,   // 8
+    USER_GPS_BAUD_RATE                ,   // 9
+    USER_GPS_PROTOCOL                 ,   // 10
     USER_HARD_IRON_X                  ,
     USER_HARD_IRON_Y                  ,
     USER_SOFT_IRON_RATIO              ,

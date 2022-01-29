@@ -39,6 +39,16 @@ limitations under the License.
 #include "osapi.h"
 #include "osresources.h"
 
+
+/*
+Function to set camera flag, indicating that VIO camera triggering can commence
+*/
+BOOL setCameraFlag(uint8_t data){
+    camera_flag = data;
+    return true;
+}
+
+
 /** ***************************************************************************
  * @name TaskDataAcquisition() CALLBACK main loop
  * @brief Get the sensor data at the specified frequency (based on the
@@ -75,10 +85,18 @@ void TaskDataAcquisition(void const *argument)
     //   from the buffer, calibrated, filtered and provided to the user for
     //   subsequent processing.
 
+    // ------------------------- Stuff to handle triggering -------------------
     int imu_count = 0;
     cam_count = 0; 
     cam_stamp = 0;
     configureIO3Pin(GPIO_INPUT);
+    setIO2Pin(0);
+
+    /*
+    while (!camera_flag){
+        ProcessUserCommands ();
+    }*/
+    // -------------------------------------------------------------------------
 
     while( 1 )
     {
@@ -104,7 +122,7 @@ void TaskDataAcquisition(void const *argument)
             setDataReadyPin(1);
         }
 
-        if (!(imu_count % 10) && getIO3PinState()){
+        if (!(imu_count % 10) && camera_flag){
             cam_stamp = 1;
             setIO2Pin (1);
             cam_count += 1;

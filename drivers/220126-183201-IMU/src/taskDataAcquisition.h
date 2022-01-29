@@ -30,6 +30,9 @@ limitations under the License.
 
 uint32_t cam_count;
 uint8_t cam_stamp;
+uint8_t camera_flag;
+
+BOOL setCameraFlag(uint8_t data);
 
 #include "stdint.h"
 #include "GlobalConstants.h"
@@ -40,5 +43,6 @@ extern void GetSensorsData(void);
 extern void EnterMainAlgLoop(void);
 extern void DataAquisitionStart(void);
 extern BOOL isOneHundredHertzFlag(void);
+
 
 #endif
