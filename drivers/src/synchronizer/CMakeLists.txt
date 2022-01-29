@@ -58,6 +58,8 @@ add_service_files(
    FILES
    SetTimeStamp.srv
    GetTimeStamp.srv
+   ReadyRequest.srv
+   ReadySignal.srv
 )
 
 ## Generate actions in the 'action' folder
