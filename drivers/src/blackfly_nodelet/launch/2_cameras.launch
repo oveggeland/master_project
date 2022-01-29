@@ -51,10 +51,6 @@
 
     <!-- Enable Dynamic Reconfigure -->
     <param name="enable_dyn_reconf" value="false" type="bool" />
-
-    <!-- Extra parameters added for camera synchronization-->
-    <param name="cam_sync" value="true" type="bool" />
-
   </node>
 
   <!-- Launch imageview to see camera output-->

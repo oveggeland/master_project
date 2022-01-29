@@ -1,6 +1,6 @@
 <launch>
     <!-- Launch synchronizer server-->
-    <node pkg="synchronizer" name="synchronize_server" type="server.py" output="screen"> </node>
+    <node pkg="synchronizer" name="synchronize_server" type="server.py" output="screen" args="2"> </node>
 
     <!-- Launch openimu driver -->
     <include file="$(find ros_openimu)/launch/openimu_driver.launch"/>

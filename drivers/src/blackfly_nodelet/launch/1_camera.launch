@@ -52,10 +52,7 @@
     <rosparam param="exp_comp_flags">     [false]</rosparam>
 
     <!-- Enable Dynamic Reconfigure -->
-    <rosparam param="enable_dyn_reconf">  true</rosparam>
-
-    <!-- Extra parameters added for camera synchronization-->
-    <param name="cam_sync" value="true" type="bool" />
+    <rosparam param="enable_dyn_reconf">  false</rosparam>
   </node>
 
   <!-- Launch imageview to see camera output-->
