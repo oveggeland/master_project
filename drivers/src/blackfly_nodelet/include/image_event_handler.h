@@ -28,7 +28,7 @@ class ImageEventHandler : public ImageEvent
 	public:
 		ImageEventHandler(std::string p_cam_name, CameraPtr p_cam_ptr, image_transport::CameraPublisher *p_cam_pub_ptr, 
 							boost::shared_ptr<camera_info_manager::CameraInfoManager> p_c_info_mgr_ptr, 
-							DeviceEventHandler* p_device_event_handler_ptr, bool p_exp_time_comp_flag)
+							DeviceEventHandler* p_device_event_handler_ptr, bool p_exp_time_comp_flag, uint8_t id)
 		{
 			m_cam_name = p_cam_name;
 			m_cam_ptr = p_cam_ptr;
@@ -38,7 +38,11 @@ class ImageEventHandler : public ImageEvent
 			m_exp_time_comp_flag = p_exp_time_comp_flag;
 			image_msg = boost::make_shared<sensor_msgs::Image>();
 			img_count = 0;
+			cam_id = id;
 			// config_all_chunk_data();
+
+			ros::NodeHandle n;
+			service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", true);
 		}
 		~ImageEventHandler()
 		{
@@ -47,12 +51,17 @@ class ImageEventHandler : public ImageEvent
 		void OnImageEvent(ImagePtr image)
 		{
 			// --------------- Get time stamp from synchronizer node! ---------- //
-			const std::map<std::string, std::string> m_header {{"id", m_cam_name}};
-			ros::NodeHandle n;
-			ros::ServiceClient service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", false, m_header);
-			synchronizer::GetTimeStamp srv;
+			srv.request.id = cam_id;
 			srv.request.seq = img_count;
 			service.call(srv);
+
+			int frame_id = image->GetFrameID();
+			ROS_INFO("Chunk Frame ID is %d", frame_id);
+
+			if (srv.response.secs == -1){
+				ROS_WARN("Cameras not ready yet");
+				return;
+			}
 
 			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
 			// Wait for IMU to have posted time stamp on server
@@ -190,6 +199,9 @@ class ImageEventHandler : public ImageEvent
 		image_transport::CameraPublisher *m_cam_pub_ptr;
 		std::string m_cam_name;
 		bool m_exp_time_comp_flag = false;
-		int img_count;
+		uint32_t img_count;
+		uint8_t cam_id;
+		ros::ServiceClient service;
+		synchronizer::GetTimeStamp srv;
 };
 #endif //IMG_EVENT_HANDLER_

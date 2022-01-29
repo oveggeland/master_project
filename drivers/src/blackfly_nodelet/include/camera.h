@@ -8,6 +8,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <image_transport/image_transport.h>
 #include <camera_info_manager/camera_info_manager.h>
+#include <synchronizer/ReadySignal.h>
 
 using namespace Spinnaker;
 
@@ -81,7 +82,7 @@ struct camera_settings
 class blackfly_camera
 {
 public:
-	blackfly_camera(camera_settings settings, CameraPtr cam_ptr)
+	blackfly_camera(camera_settings settings, CameraPtr cam_ptr, uint8_t id)
 	{
 		// save the camera pointer and the settings object
 		m_cam_ptr = cam_ptr;
@@ -101,13 +102,22 @@ public:
 
 		// create event handlers
 		m_device_event_handler_ptr = new DeviceEventHandler(m_cam_ptr);
-		m_image_event_handler_ptr = new ImageEventHandler(m_cam_settings.cam_name, m_cam_ptr, &m_cam_pub, m_cam_info_mgr_ptr, m_device_event_handler_ptr, m_cam_settings.exp_comp_flag);
+		m_image_event_handler_ptr = new ImageEventHandler(m_cam_settings.cam_name, m_cam_ptr, &m_cam_pub, m_cam_info_mgr_ptr, m_device_event_handler_ptr, m_cam_settings.exp_comp_flag, id);
 
 		// register event handlers
 		m_cam_ptr->RegisterEvent(*m_device_event_handler_ptr);
 		m_cam_ptr->RegisterEvent(*m_image_event_handler_ptr);
 
 		m_cam_ptr->BeginAcquisition();
+		
+		// Tell server that camera is ready!
+		ros::NodeHandle n;
+		ros::ServiceClient service = n.serviceClient<synchronizer::ReadySignal>("ready_signal", false);
+		synchronizer::ReadySignal srv;
+		srv.request.id = id;
+		while (!service.call(srv)){
+			ROS_WARN_ONCE("Service not ready? Waiting for response on camera ready signal");
+		};
 	}
 	~blackfly_camera()
 	{
@@ -164,9 +174,10 @@ public:
 	{
 		try
 		{
+			m_cam_ptr->DeviceReset;
 			// initialize the camera
 			m_cam_ptr->Init();
-
+			
 			m_cam_ptr->AcquisitionStop();
 
 			// Set up pixel format
