@@ -1,3 +1,4 @@
+from os import read
 import struct
 from ..models.args import DetectorArgs
 from ..framework.communicator import CommunicatorFactory
@@ -28,7 +29,7 @@ class OpenIMU(object):
 
     def onfinddev(self, device):
         self.imudevice = device
-        #self.imudevice.setup(None)
+        self.imudevice.setup(None)
     
     def startup(self):
         self.find(self.onfinddev)
@@ -73,11 +74,10 @@ class OpenIMU(object):
             yrate = struct.unpack('f', bytes(yrateraw))[0]
             zrateraw = (readback[24:28]) #zrate
             zrate = struct.unpack('f', bytes(zrateraw))[0]
-            try:
-                cam_stamp = readback[28] #zrate
-            except:
-                cam_stamp = 0 
-            imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate, cam_stamp]
+            cam_count_raw = readback[28:32]
+            cam_count = struct.unpack('I', bytes(cam_count_raw))[0]
+            cam_stamp = readback[32]
+            imudata =[time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate, cam_count, cam_stamp]
 
 # a1 a2 packets in development
         if datatype == ('a1'):
@@ -115,7 +115,10 @@ class OpenIMU(object):
 
 # set values in development
     def setpacketrate(self, packetrate):
-        self.imudevice.set_param(['rate', packetrate])      #200, 100, 50, 20, 10, 5, 2, 0
+        self.imudevice.set_param({'paramId':4, 'value':packetrate})      #200, 100, 50, 20, 10, 5, 2, 0
+
+    def set_cam_ready_flag(self, value):
+        return self.imudevice.set_param({'paramId':8, 'value':value})
 
     def setpackettype(self, packettype):
         self.imudevice.set_param(['type', packettype])      #'z1", "a1", "a2"
