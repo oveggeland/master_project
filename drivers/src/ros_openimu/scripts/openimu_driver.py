@@ -4,9 +4,7 @@ import rospy
 from synchronizer.srv import *
 import sys
 import math
-from time import sleep, time
 from sensor_msgs.msg import Imu
-import random
 
 try:
     from ros_openimu.src.aceinna.tools import OpenIMU
@@ -14,7 +12,6 @@ except:  # pylint: disable=bare-except
     temp = (sys.path[0])
     temp2 = temp[0:(len(temp)-7)]
     sys.path.append(temp2 + 'src')
-    #sys.path.append('./src')
     from aceinna.tools import OpenIMU
 
 
@@ -26,35 +23,27 @@ class OpenIMUros:
     def close(self):
         self.openimudev.close()
 
-    '''
     def readimu(self, packet_type):
         readback = self.openimudev.getdata(packet_type)
         return readback
-    '''
 
-    def readimu(self):
-        readback = self.openimudev.getdata('o1')
-        return readback
 
 
 if __name__ == "__main__":
     rospy.init_node("openimu_driver")
 
+    # Initialize topic publisher
     pub_imu = rospy.Publisher('imu_acc_ar', Imu, queue_size=5)
-    imu_msg = Imu()             # IMU data
+    imu_msg = Imu()
         
     seq = 0
     frame_id = 'OpenIMU'
     convert_rads = math.pi /180
 
+    # Initialize IMU driver
     options = {'baudrate':230400, 'filter_device_type':'IMU', 'com_port':'auto'}
-    #options = {'baudrate':'auto', 'filter_device_type':'auto', 'com_port':'auto'}
     openimu_wrp = OpenIMUros(options)
     rospy.loginfo("OpenIMU driver initialized.")
-
-
-    cam_count = 0
-
 
     # Wait for cameras to be ready!
     rospy.wait_for_service('ready_request')    
@@ -62,10 +51,10 @@ if __name__ == "__main__":
     while not cams_ready().ready:
         continue
 
-    print("Cameras are ready! Inform IMU to start triggering procedure!")
-    while openimu_wrp.openimudev.set_cam_ready_flag(0)['packetType'] != 'success':
+    # Inform IMU that cameras are ready
+    print("Cameras are ready! Inform IMU to reset counters and start triggering camera!")
+    while openimu_wrp.openimudev.reset_signal(1)['packetType'] != 'success':
         continue
-    # openimu_wrp.openimudev.setpacketrate(200)
 
     # Persistent time stamp server proxy
     rospy.wait_for_service('set_time_stamp')    
@@ -74,25 +63,22 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         #read the data - call the get imu measurement data
-        readback = openimu_wrp.readimu()
+        readback = openimu_wrp.readimu('o1')
        
         if readback:
-            
-            # Get time stamp from the evaluation board
-            us = readback[0]
-            ts = rospy.Time(0, us*1000)
-
             # Check if time stamp should be shared with cameras
-            cam_stamp = readback[8]
-            if cam_stamp:
-                print("Cam stamp! Storing to server:", str(ts.secs+ts.nsecs/10**9))
+            trigger_flag = readback[9]
+            if trigger_flag:
+                cam_count = readback[8]
+                cam_stamp = rospy.Time(0, 1000*readback[1])
                 # Request to store on server
                 try:
-                    resp = set_time_stamp(ts.secs, ts.nsecs, cam_count)
+                    resp = set_time_stamp(cam_stamp.secs, cam_stamp.nsecs, cam_count)
                 except rospy.ServiceException as exc:
                     print("Service did not process request: " + str(exc))
 
             # Create IMU topic message
+            ts = rospy.Time(0, readback[0]*1000)
             imu_msg.header.stamp = ts
             imu_msg.header.frame_id = frame_id
             imu_msg.header.seq = seq
@@ -109,7 +95,7 @@ if __name__ == "__main__":
 
             pub_imu.publish(imu_msg)
 
-            seq = seq + 1
+            seq += 1
 
     openimu_wrp.close()         # exit
 
