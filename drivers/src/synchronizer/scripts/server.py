@@ -7,29 +7,21 @@ import numpy as np
 class TimeStamper():
     def __init__(self, n_cams) -> None:
         self.n_cams = n_cams
-        self.buffer_size = 10
-        self.ts = np.array([[rospy.Time(0) for t in range(self.buffer_size)] for n in range(n_cams)])
+        self.stamps = np.empty(65536, rospy.Time)
         self.clients_ready = np.zeros(self.n_cams).astype(int)
 
     
-    def get_time(self, id, seq):
-        if self.clients_ready.sum() != self.n_cams:
-            print("Both cameras not ready!")
-            return -1
-        
-        ts = self.ts[id, seq%self.buffer_size]
-        self.ts[id, seq%self.buffer_size] = rospy.Time(0)
-        return ts.secs, ts.nsecs
+    def get_time(self, seq):
+        ts = self.stamps[seq]
+        try:
+            return ts.secs, ts.nsecs
+        except:
+            return 0, 0
 
     def set_time(self, secs, nsecs, seq):
-        if self.clients_ready.sum() != self.n_cams:
-            print("Clients not ready! Don't do anything")
-            return 0
-        else:
-            ts = rospy.Time(secs, nsecs)
-            for i in range(self.ts.shape[0]):
-                self.ts[i, seq%self.buffer_size] = ts
-            return 1
+        ts = rospy.Time(secs, nsecs)
+        self.stamps[seq] = ts
+        return 1
 
     def camera_ready(self, id):
         self.clients_ready[id] = 1
@@ -40,7 +32,7 @@ def handle_set_time_stamp(req, time_stamper):
     return True
 
 def handle_get_time_stamp(req, time_stamper):
-    return time_stamper.get_time(req.id, req.seq)
+    return time_stamper.get_time(req.seq)
 
 def handle_ready_signal(req, time_stamper):
     time_stamper.clients_ready[req.id] = 1
