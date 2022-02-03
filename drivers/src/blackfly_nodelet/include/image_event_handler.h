@@ -37,9 +37,6 @@ class ImageEventHandler : public ImageEvent
 			m_device_event_handler_ptr = p_device_event_handler_ptr;
 			m_exp_time_comp_flag = p_exp_time_comp_flag;
 			image_msg = boost::make_shared<sensor_msgs::Image>();
-			img_count = 0;
-			cam_id = id;
-			// config_all_chunk_data();
 
 			ros::NodeHandle n;
 			service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", true);
@@ -50,30 +47,18 @@ class ImageEventHandler : public ImageEvent
 		}
 		void OnImageEvent(ImagePtr image)
 		{
+			int frame_id = image->GetFrameID();
+
 			// --------------- Get time stamp from synchronizer node! ---------- //
-			srv.request.id = cam_id;
-			srv.request.seq = img_count;
+			srv.request.seq = frame_id;
 			service.call(srv);
 
-			int frame_id = image->GetFrameID();
-			ROS_INFO("Chunk Frame ID is %d", frame_id);
-
-			if (srv.response.secs == -1){
-				ROS_WARN("Cameras not ready yet");
+			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
+			
+			if (trigger_time == ros::Time(0)){
+				ROS_WARN("No time stamp available for image %d! Neglecting image", frame_id);
 				return;
 			}
-
-			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
-			// Wait for IMU to have posted time stamp on server
-			while (trigger_time == ros::Time(0)){
-				if (m_cam_ptr->TransferQueueCurrentBlockCount.GetValue() > 0){
-					ROS_WARN("Too much time passed, new image waiting...");
-					return;
-				}
-				service.call(srv);
-				trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
-			}
-			img_count ++;
 			// ----------------------------------------------------------------- //
 
 			ros::Time image_stamp = trigger_time;
@@ -87,7 +72,7 @@ class ImageEventHandler : public ImageEvent
 				// add half exposure time to the trigger time
 				image_stamp += ros::Duration(0, exp_time/2.0);
 			}
-			ROS_INFO("Image stamp for %s: %d.%d", m_cam_name.c_str(), image_stamp.sec, image_stamp.nsec);
+			// ROS_INFO("Image stamp for %s: %d.%d", m_cam_name.c_str(), image_stamp.sec, image_stamp.nsec);
 			
 			if (image->IsIncomplete())
 			{
@@ -199,8 +184,6 @@ class ImageEventHandler : public ImageEvent
 		image_transport::CameraPublisher *m_cam_pub_ptr;
 		std::string m_cam_name;
 		bool m_exp_time_comp_flag = false;
-		uint32_t img_count;
-		uint8_t cam_id;
 		ros::ServiceClient service;
 		synchronizer::GetTimeStamp srv;
 };
