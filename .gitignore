@@ -10,3 +10,5 @@ drivers/data_collection/
 *.bag
 evaluation/
 report/
+kalibr/
+evo/
