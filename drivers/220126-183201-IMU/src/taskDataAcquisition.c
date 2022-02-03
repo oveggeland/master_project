@@ -43,8 +43,11 @@ limitations under the License.
 /*
 Function to set camera flag, indicating that VIO camera triggering can commence
 */
-BOOL setCameraFlag(uint8_t data){
-    camera_flag = data;
+BOOL resetSystem(){
+    cam_count = 0;
+    imu_count = 0;
+    camera_ready_flag = true;
+    setIO3Pin(1);
     return true;
 }
 
@@ -86,16 +89,11 @@ void TaskDataAcquisition(void const *argument)
     //   subsequent processing.
 
     // ------------------------- Stuff to handle triggering -------------------
-    int imu_count = 0;
+    imu_count = 0;
     cam_count = 0; 
-    cam_stamp = 0;
-    configureIO3Pin(GPIO_INPUT);
+    trigger_flag = false;
     setIO2Pin(0);
 
-    /*
-    while (!camera_flag){
-        ProcessUserCommands ();
-    }*/
     // -------------------------------------------------------------------------
 
     while( 1 )
@@ -122,13 +120,14 @@ void TaskDataAcquisition(void const *argument)
             setDataReadyPin(1);
         }
 
-        if (!(imu_count % 10) && camera_flag){
-            cam_stamp = 1;
+        if (!(imu_count % 10) && camera_ready_flag){
+            trigger_flag = 1;
             setIO2Pin (1);
+            cam_stamp = platformGetCurrTimeStamp(); 
             cam_count += 1;
         }
         else{
-            cam_stamp = 0;
+            trigger_flag = 0;
             setIO2Pin(0);
         }
     

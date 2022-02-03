@@ -127,17 +127,17 @@ BOOL Fill_z1PacketPayload(uint8_t *payload, uint8_t *payloadLen)
 
 BOOL Fill_o1PacketPayload(uint8_t *payload, uint8_t *payloadLen)
 {
-    uint64_t tstamp;
     double accels[NUM_AXIS];
     double rates[NUM_AXIS];
     
     o1_payload_t *pld = (o1_payload_t *)payload;  
 
-//  tstamp = platformGetDacqTimeStamp();          // time stamp of last sensor sample in microseconds from system start
-    tstamp = platformGetCurrTimeStamp();            // current time stamp in microseconds from system start
+    //imu_stamp = platformGetDacqTimeStamp();          // time stamp of last sensor sample in microseconds from system start
+    //cam_stamp = platformGetCurrTimeStamp();            // current time stamp in microseconds from system start
 //  tstamp /= 1000;                                 // convert to miliseconds 
 //  timer  = getSystemTime();                       // OS timer value (tick defined in FreeRTOSConfig.h)
-    pld->timer = tstamp;
+    pld->imu_stamp = platformGetDacqTimeStamp(); 
+    pld->cam_stamp = cam_stamp;
     GetAccelData_mPerSecSq(accels);
     GetRateData_degPerSec(rates);
 
@@ -147,7 +147,7 @@ BOOL Fill_o1PacketPayload(uint8_t *payload, uint8_t *payloadLen)
     }
 
     pld->cam_count = cam_count;
-    pld->cam_stamp = cam_stamp;
+    pld->trigger_flag = trigger_flag;
 
     *payloadLen = sizeof(o1_payload_t);
     return TRUE;

@@ -47,7 +47,7 @@ const UserConfigurationStruct gDefaultUserConfig = {
     .lpfRateFilterFreq   =  0,
     .orientation         =  "+X+Y+Z",
     // add default parameter values here, if desired
-    .cameraFlag          =  0,
+    .cameraReadyFlag          =  0,
     .uartGpsBaudRate     =  0, 
     .uartGpsProtocol     =  0,
     .hardIron_X          = 0.0,
@@ -188,8 +188,8 @@ BOOL  UpdateSystemParameter(uint32_t number, uint64_t data, BOOL fApply)
         // case USER_XXX:  add function calls here if parameter XXXX
         //                        required be updated on the fly
         //             break;
-            case  USER_CAMERA_FLAG:
-                result = setCameraFlag((int) data);
+            case  USER_RESET_SIGNAL:
+                result = resetSystem();
                 break;
         default:
             // by default result should be FALSE for system parameter

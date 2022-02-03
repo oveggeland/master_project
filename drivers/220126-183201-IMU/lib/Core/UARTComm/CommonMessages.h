@@ -37,11 +37,12 @@ typedef struct {
 }data1_payload_t;
 
 typedef struct {
-    uint32_t timer;
+    uint32_t imu_stamp;
+    uint32_t cam_stamp;
     float    accel_mpss[3];
     float    rate_dps[3];
     uint32_t cam_count;
-    uint8_t cam_stamp;
+    uint8_t trigger_flag;
 }o1_payload_t;
 
 

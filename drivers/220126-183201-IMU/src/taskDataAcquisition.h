@@ -28,11 +28,13 @@ limitations under the License.
 #ifndef _TASK_DATA_ACQUISITION_H_
 #define _TASK_DATA_ACQUISITION_H_
 
-uint32_t cam_count;
-uint8_t cam_stamp;
-uint8_t camera_flag;
+uint32_t imu_count; // Number of IMU measurements
+uint32_t cam_count; // Number of camera triggers sent
+uint32_t cam_stamp; // Last stamp of camera trigger signal
+BOOL trigger_flag;  // Flag to indicate whether the camera was triggered!
+BOOL camera_ready_flag; // Flag to indicate if the cameras are ready to be triggered
 
-BOOL setCameraFlag(uint8_t data);
+BOOL resetSystem(); // Reset the above parameters
 
 #include "stdint.h"
 #include "GlobalConstants.h"

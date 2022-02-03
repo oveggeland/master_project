@@ -129,7 +129,7 @@ typedef struct {
 #define USR_OUT_TEST_PAYLOAD_LEN   (4)     // test parameter (uint32_t)    
 #define USR_OUT_DATA1_PAYLOAD_LEN  (4*10)  // 1 integer +3accels (float LE) + 3gyros (float LE) + 3 mags (floatLE)    
 #define USR_OUT_SCALED1_PAYLOAD_LEN (52)   // See UserMessaging.c for make-up of Scaled1 message
-#define USR_OUT_OSKAR_PAYLOAD_LEN (4*8 + 1) // Time stamp, 3*gyro, 3*acc, Cam count, Cam indicator
+#define USR_OUT_OSKAR_PAYLOAD_LEN (4*9 + 1) // 2*Time stamp, 3*gyro, 3*acc, Cam count, Cam indicator
 
 
 #define USER_OK      0x00
