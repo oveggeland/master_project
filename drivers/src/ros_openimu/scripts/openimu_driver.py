@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from os import read
 import rospy
 from synchronizer.srv import *
 import sys
@@ -53,18 +54,17 @@ if __name__ == "__main__":
 
     # Inform IMU that cameras are ready
     print("Cameras are ready! Inform IMU to reset counters and start triggering camera!")
-    while openimu_wrp.openimudev.reset_signal(1)['packetType'] != 'success':
+    while openimu_wrp.openimudev.trigger_cameras(20)['packetType'] != 'success':
         continue
 
     # Persistent time stamp server proxy
     rospy.wait_for_service('set_time_stamp')    
     set_time_stamp = rospy.ServiceProxy('set_time_stamp', SetTimeStamp, persistent=True)
 
-
     while not rospy.is_shutdown():
         #read the data - call the get imu measurement data
         readback = openimu_wrp.readimu('o1')
-       
+            
         if readback:
             # Check if time stamp should be shared with cameras
             trigger_flag = readback[9]
@@ -73,7 +73,7 @@ if __name__ == "__main__":
                 cam_stamp = rospy.Time(0, 1000*readback[1])
                 # Request to store on server
                 try:
-                    resp = set_time_stamp(cam_stamp.secs, cam_stamp.nsecs, cam_count)
+                    resp = set_time_stamp(cam_stamp.secs, cam_stamp.nsecs, cam_count-1)
                 except rospy.ServiceException as exc:
                     print("Service did not process request: " + str(exc))
 
@@ -84,13 +84,13 @@ if __name__ == "__main__":
             imu_msg.header.seq = seq
 
             imu_msg.orientation_covariance[0] = -1
-            imu_msg.linear_acceleration.x = readback[1]
-            imu_msg.linear_acceleration.y = readback[2]
-            imu_msg.linear_acceleration.z = readback[3]
+            imu_msg.linear_acceleration.x = readback[2]
+            imu_msg.linear_acceleration.y = readback[3]
+            imu_msg.linear_acceleration.z = readback[4]
             imu_msg.linear_acceleration_covariance[0] = -1
-            imu_msg.angular_velocity.x = readback[4] * convert_rads
-            imu_msg.angular_velocity.y = readback[5] * convert_rads
-            imu_msg.angular_velocity.z = readback[6] * convert_rads
+            imu_msg.angular_velocity.x = readback[5] * convert_rads
+            imu_msg.angular_velocity.y = readback[6] * convert_rads
+            imu_msg.angular_velocity.z = readback[7] * convert_rads
             imu_msg.angular_velocity_covariance[0] = -1
 
             pub_imu.publish(imu_msg)

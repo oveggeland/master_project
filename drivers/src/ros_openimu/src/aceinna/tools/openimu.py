@@ -60,9 +60,9 @@ class OpenIMU(object):
 
             if datatype == ('o1'):
                 imutimeraw = (readback[0:4]) #time in ms
-                imu_time_ms = struct.unpack('I', bytes(imutimeraw))[0]
+                imu_time_us = struct.unpack('I', bytes(imutimeraw))[0]
                 camtimeraw = (readback[4:8]) #time in ms
-                cam_time_ms = struct.unpack('I', bytes(camtimeraw))[0]
+                cam_time_us = struct.unpack('I', bytes(camtimeraw))[0]
                 xaccelraw = (readback[8:12]) #xaccel
                 xaccel = struct.unpack('f', bytes(xaccelraw))[0]
                 yaccelraw = (readback[12:16]) #yaccel        
@@ -78,7 +78,7 @@ class OpenIMU(object):
                 cam_count_raw = readback[32:36]
                 cam_count = struct.unpack('I', bytes(cam_count_raw))[0]
                 cam_stamp = readback[36]
-                imudata =[imu_time_ms, cam_time_ms, xaccel, yaccel, zaccel, xrate, yrate, zrate, cam_count, cam_stamp]
+                imudata =[imu_time_us, cam_time_us, xaccel, yaccel, zaccel, xrate, yrate, zrate, cam_count, cam_stamp]
 
     # a1 a2 packets in development
             if datatype == ('a1'):
@@ -120,8 +120,8 @@ class OpenIMU(object):
     def setpacketrate(self, packetrate):
         self.imudevice.set_param({'paramId':4, 'value':packetrate})      #200, 100, 50, 20, 10, 5, 2, 0
 
-    def reset_signal(self, value):
-        return self.imudevice.set_param({'paramId':8, 'value':1})
+    def trigger_cameras(self, value):
+        return self.imudevice.set_param({'paramId':8, 'value':value})
 
     def setpackettype(self, packettype):
         self.imudevice.set_param(['type', packettype])      #'z1", "a1", "a2"
