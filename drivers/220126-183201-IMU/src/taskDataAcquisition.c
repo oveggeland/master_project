@@ -43,11 +43,15 @@ limitations under the License.
 /*
 Function to set camera flag, indicating that VIO camera triggering can commence
 */
-BOOL resetSystem(){
+BOOL resetSystem(uint8_t freq){
     cam_count = 0;
     imu_count = 0;
-    camera_ready_flag = true;
-    setIO3Pin(1);
+    camera_frequency = freq;
+    trigger_flag = false;
+    if (camera_frequency > 0){
+        divider = (uint8_t) (200/camera_frequency);
+        setIO3Pin(1);
+    }
     return true;
 }
 
@@ -91,14 +95,17 @@ void TaskDataAcquisition(void const *argument)
     // ------------------------- Stuff to handle triggering -------------------
     imu_count = 0;
     cam_count = 0; 
+    camera_frequency = 0;
+    divider = 0;
     trigger_flag = false;
     setIO2Pin(0);
+    setIO3Pin(0);
+
 
     // -------------------------------------------------------------------------
 
     while( 1 )
     {
-        imu_count ++;
         // *****************************************************************
         // NOTE: This task loop runs at 200 Hz
         // *****************************************************************
@@ -120,7 +127,15 @@ void TaskDataAcquisition(void const *argument)
             setDataReadyPin(1);
         }
 
-        if (!(imu_count % 10) && camera_ready_flag){
+        imu_count ++;
+
+        /*
+        Calculate divider!
+
+        IMU rate is 200. 200/cam_freq = divider
+        */
+        
+        if (camera_frequency > 0 && !(imu_count % divider)){
             trigger_flag = 1;
             setIO2Pin (1);
             cam_stamp = platformGetCurrTimeStamp(); 
@@ -174,7 +189,6 @@ void TaskDataAcquisition(void const *argument)
         //applyNewScaledSensorsData();
         //*****************************************************************
 
-        setIO2Pin (0);
         if(platformHasMag() ) {
             // Mag Alignment (follows Kalman filter or user algorithm as the
             // innovation routine calculates the euler angles and the magnetic

@@ -189,7 +189,7 @@ BOOL  UpdateSystemParameter(uint32_t number, uint64_t data, BOOL fApply)
         //                        required be updated on the fly
         //             break;
             case  USER_RESET_SIGNAL:
-                result = resetSystem();
+                result = resetSystem((uint8_t) data);
                 break;
         default:
             // by default result should be FALSE for system parameter
