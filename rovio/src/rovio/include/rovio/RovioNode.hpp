@@ -274,7 +274,7 @@ class RovioNode{
     const int nFieldsPcl = 18;
     std::string namePcl[nFieldsPcl] = {"id","camId","rgb","status","x","y","z","b_x","b_y","b_z","d","c_00","c_01","c_02","c_11","c_12","c_22","c_d"};
     int sizePcl[nFieldsPcl] = {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4};
-    int countPcl[nFieldsPcl] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    int countPcl[nFieldsPcl] = {1,1,1,mtState::nCam_,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     int datatypePcl[nFieldsPcl] = {sensor_msgs::PointField::INT32,sensor_msgs::PointField::INT32,sensor_msgs::PointField::UINT32,sensor_msgs::PointField::UINT32,
         sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,
         sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,
@@ -928,11 +928,10 @@ class RovioNode{
               // Write feature id, camera id, and rgb
               uint8_t gray = 255;
               uint32_t rgb = (gray << 16) | (gray << 8) | gray;
-              uint32_t status = filterState.fsm_.features_[i].mpStatistics_->status_[0];
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[0].offset], &filterState.fsm_.features_[i].idx_, sizeof(int));  // id
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[1].offset], &camID, sizeof(int));  // cam id
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[2].offset], &rgb, sizeof(uint32_t));  // rgb
-              memcpy(&pclMsg_.data[offset + pclMsg_.fields[3].offset], &status, sizeof(int));  // status
+              memcpy(&pclMsg_.data[offset + pclMsg_.fields[3].offset], filterState.fsm_.features_[i].mpStatistics_->status_, mtState::nCam_*sizeof(int));  // status
 
               // Write coordinates to pcl message.
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[4].offset], &MrMP[0], sizeof(float));  // x
