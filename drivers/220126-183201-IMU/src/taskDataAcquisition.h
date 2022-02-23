@@ -32,9 +32,9 @@ uint32_t imu_count; // Number of IMU measurements
 uint32_t cam_count; // Number of camera triggers sent
 uint32_t cam_stamp; // Last stamp of camera trigger signal
 BOOL trigger_flag;  // Flag to indicate whether the camera was triggered!
-BOOL camera_ready_flag; // Flag to indicate if the cameras are ready to be triggered
-
-BOOL resetSystem(); // Reset the above parameters
+uint8_t camera_frequency; // Flag to indicate if the cameras are ready to be triggered
+uint8_t divider;
+BOOL resetSystem(uint8_t freq); // Reset the above parameters
 
 #include "stdint.h"
 #include "GlobalConstants.h"
