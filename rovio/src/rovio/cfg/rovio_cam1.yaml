@@ -1,0 +1,12 @@
+image_width: 720
+image_height: 540
+camera_name: cam
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [594.384342839, 0.0, 354.788787793, 0.0, 594.692269104, 265.078118162, 0.0, 0.0, 1.0]
+distortion_model: equidistant
+distortion_coefficients:
+  rows: 1
+  cols: 4
+  data: [-0.0228286651497, 0.0165003521691, -0.0769719002215, 0.080258935926]
