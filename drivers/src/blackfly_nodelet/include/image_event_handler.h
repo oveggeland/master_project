@@ -40,6 +40,7 @@ class ImageEventHandler : public ImageEvent
 
 			ros::NodeHandle n;
 			service = n.serviceClient<synchronizer::GetTimeStamp>("get_time_stamp", true);
+			int max_queue_count = 10; // m_cam_ptr->TransferQueueMaxBlockCount.GetValue();
 		}
 		~ImageEventHandler()
 		{
@@ -55,10 +56,16 @@ class ImageEventHandler : public ImageEvent
 
 			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
 			
-			if (trigger_time == ros::Time(0)){
-				ROS_WARN("No time stamp available for image %d! Neglecting image", frame_id);
-				return;
+			int count = 0;
+			while(trigger_time == ros::Time(0)){
+				service.call(srv);
+				trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
+				if (m_cam_ptr->TransferQueueCurrentBlockCount.GetValue() == 1){
+					ROS_WARN("Can't wait anymore for timestamp at image %d for %s", frame_id, m_cam_name.c_str());
+					break;
+				}
 			}
+
 			// ----------------------------------------------------------------- //
 
 			ros::Time image_stamp = trigger_time;
@@ -184,7 +191,10 @@ class ImageEventHandler : public ImageEvent
 		image_transport::CameraPublisher *m_cam_pub_ptr;
 		std::string m_cam_name;
 		bool m_exp_time_comp_flag = false;
+		// For synchronize server
 		ros::ServiceClient service;
 		synchronizer::GetTimeStamp srv;
+		// Maximum number of images in transfer queue from camera
+		int max_queue_count;
 };
 #endif //IMG_EVENT_HANDLER_
