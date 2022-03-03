@@ -5,8 +5,7 @@ import glob
 import json
 import struct
 import rosbag
-
-EVO_PATH = "/home/oveggeland/master_project/evo"
+from helper import EVO_PATH
 
 def try_create_path(path):
     if not os.path.isdir(path):

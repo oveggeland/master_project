@@ -1,8 +1,9 @@
+EVO_PATH = "/home/oveggeland/master_project/evo"
 
 BASELINES = {
     'b1': 12,
     'b2': 14.5,
-    'b3': 17,
+    #'b3': 17,
     'b4': 19.5,
     'b5': 22,
 }
