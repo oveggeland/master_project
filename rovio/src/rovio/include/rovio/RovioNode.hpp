@@ -271,14 +271,15 @@ class RovioNode{
     pclMsg_.header.frame_id = imu_frame_;
     pclMsg_.height = 1;               // Unordered point cloud.
     pclMsg_.width  = mtState::nMax_;  // Number of features/points.
-    const int nFieldsPcl = 18;
-    std::string namePcl[nFieldsPcl] = {"id","camId","rgb","status","x","y","z","b_x","b_y","b_z","d","c_00","c_01","c_02","c_11","c_12","c_22","c_d"};
-    int sizePcl[nFieldsPcl] = {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4};
-    int countPcl[nFieldsPcl] = {1,1,1,mtState::nCam_,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    const int nFieldsPcl = 19;
+    std::string namePcl[nFieldsPcl] = {"id","camId","rgb","status","x","y","z","b_x","b_y","b_z","d","c_00","c_01","c_02","c_11","c_12","c_22","c_d", "tri"};
+    int sizePcl[nFieldsPcl] = {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4};
+    int countPcl[nFieldsPcl] = {1,1,1,mtState::nCam_,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     int datatypePcl[nFieldsPcl] = {sensor_msgs::PointField::INT32,sensor_msgs::PointField::INT32,sensor_msgs::PointField::UINT32,sensor_msgs::PointField::UINT32,
         sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,
         sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,
-        sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32};
+        sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,
+        sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::FLOAT32,sensor_msgs::PointField::INT32};
     pclMsg_.fields.resize(nFieldsPcl);
     int byteCounter = 0;
     for(int i=0;i<nFieldsPcl;i++){
@@ -959,6 +960,9 @@ class RovioNode{
               // Add distance uncertainty
               const float distance_cov = static_cast<float>(featureOutputReadableCov_(3,3));
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[mCounter].offset], &distance_cov, sizeof(float));
+
+              // Oskar
+              memcpy(&pclMsg_.data[offset + pclMsg_.fields[18].offset], &filterState.fsm_.features_[i].isTriangulated, sizeof(int));  // cam id
 
               // Line markers (Uncertainty rays).
               geometry_msgs::Point point_near_msg;

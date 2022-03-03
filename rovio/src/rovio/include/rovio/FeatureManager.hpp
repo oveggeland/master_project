@@ -66,6 +66,9 @@ class FeatureManager{
   FeatureStatistics<nCam>* _mpStatistics;
   MultilevelPatch<nLevels,patchSize>* _mpMultilevelPatch;
 
+  // Oskar
+  bool isTriangulated;
+
   /** Constructor
    */
   FeatureManager(){
@@ -78,6 +81,9 @@ class FeatureManager{
     _mpDistance = nullptr;
     _mpStatistics = nullptr;
     _mpMultilevelPatch = nullptr;
+
+    // Oskar
+    isTriangulated = false;
   }
 
   /** Destructor

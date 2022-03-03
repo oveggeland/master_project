@@ -823,10 +823,16 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
         filterState.mlpErrorLog_[ID] = alignment_.mlpError_;
 
+        // Oskar 
+        float tri_color=0;
+        if (f.isTriangulated==1){
+          tri_color=255;
+        }
+
         if((filterState.mode_ == LWF::ModeIEKF && successfulUpdate_) || (filterState.mode_ == LWF::ModeEKF && !outlierDetection.isOutlier(0))){
           if(mlpTemp1_.isMultilevelPatchInFrame(meas.aux().pyr_[camID],featureOutput_.c(),startLevel_,false)){
             f.mpStatistics_->status_[activeCamID] = TRACKED;
-            if(doFrameVisualisation_) mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(0,150+(activeCamID == camID)*105,0));
+            if(doFrameVisualisation_) mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(tri_color,150+(activeCamID == camID)*105,0));
           } else {
             f.mpStatistics_->status_[activeCamID] = FAILED_TRACKING;
             if(doFrameVisualisation_){
@@ -1030,6 +1036,14 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   alignedCoordinates_.drawText(filterState.img_[otherCam],std::to_string(f.idx_),cv::Scalar(150,0,0));
                 }
                 if(f.mpCoordinates_->getDepthFromTriangulation(alignedCoordinates_,state.qCM(otherCam).rotate(V3D(state.MrMC(camID)-state.MrMC(otherCam))),state.qCM(otherCam)*state.qCM(camID).inverted(), *f.mpDistance_, 0.01)){
+                  // Oskar
+                  f.isTriangulated = true;
+
+                  float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;
+                  float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
+                  float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
+
+                  initCovFeature_(0, 0) = pow(depth_uncertainty, 2);
                   filterState.resetFeatureCovariance(*it,initCovFeature_); // TODO: improve
                 }
               } else {
