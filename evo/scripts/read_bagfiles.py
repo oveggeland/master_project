@@ -5,12 +5,7 @@ import glob
 import json
 import struct
 import rosbag
-from helper import EVO_PATH
-
-def try_create_path(path):
-    if not os.path.isdir(path):
-        print(f"{path} is not a path, creating new")
-        os.mkdir(path)
+from helper import *
 
 def create_depth_data(bagpath):
     target_file = os.path.join(EVO_PATH, "data", "depths", bagpath[:-4]+".txt")
