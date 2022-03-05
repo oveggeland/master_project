@@ -1043,8 +1043,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
                   float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
 
-                  initCovFeature_(0, 0) = pow(depth_uncertainty, 2);
-                  filterState.resetFeatureCovariance(*it,initCovFeature_); // TODO: improve
+                  const float temp = initCovFeature_(0,0);
+                  initCovFeature_(0, 0) = pow(depth_uncertainty, 2);     // TODO: Find out if this should be squared or not
+                  filterState.resetFeatureCovariance(*it,initCovFeature_);
+                  initCovFeature_(0, 0) = temp;
                 }
               } else {
                 if(doFrameVisualisation_){
