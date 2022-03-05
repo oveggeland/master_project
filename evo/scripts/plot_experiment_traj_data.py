@@ -144,4 +144,7 @@ if __name__ == "__main__":
     pos_errors_per_distance_traveled(all_data, plot_path)
     pos_errors(all_data, plot_path)
 
-    plt.show()
+    if len(sys.argv) > 2 and sys.argv[2] == "--dont_show":
+        pass
+    else:
+        plt.show()

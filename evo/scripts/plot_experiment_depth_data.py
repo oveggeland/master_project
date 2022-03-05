@@ -101,4 +101,7 @@ if __name__ == "__main__":
     # Different plot functions to visualize the data
     average_uncertainty_per_distance(all_data, plot_path)
 
-    plt.show()
+    if len(sys.argv) > 2 and sys.argv[2] == "--dont_show":
+        pass
+    else:
+        plt.show()

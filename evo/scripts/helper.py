@@ -1,6 +1,6 @@
 import os
 import math
-
+import numpy as np
 from numpy import rad2deg
 
 EVO_PATH = "/home/oveggeland/master_project/evo"
