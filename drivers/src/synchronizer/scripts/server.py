@@ -9,10 +9,14 @@ class TimeStamper():
         self.n_cams = n_cams
         self.stamps = np.empty(65536, rospy.Time)
         self.clients_ready = np.zeros(self.n_cams).astype(int)
+        self.last_seq = 0
 
     
     def get_time(self, seq):
         ts = self.stamps[seq]
+        if abs(seq-self.last_seq) > 1:
+            print(f"Cameras are not in sync... Offset is at least {abs(seq-self.last_seq)-1} frames")
+        self.last_seq = seq
         try:
             return ts.secs, ts.nsecs
         except:
