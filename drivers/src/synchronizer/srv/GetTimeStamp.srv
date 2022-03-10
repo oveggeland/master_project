@@ -1,4 +1,5 @@
 uint32 seq
+string cam_name
 ---
 int32 secs
 int32 nsecs

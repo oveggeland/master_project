@@ -49,10 +49,13 @@ class ImageEventHandler : public ImageEvent
 		void OnImageEvent(ImagePtr image)
 		{
 			int frame_id = image->GetFrameID();
-
+			
 			// --------------- Get time stamp from synchronizer node! ---------- //
+			
 			srv.request.seq = frame_id;
+			srv.request.cam_name = m_cam_name.c_str();
 			service.call(srv);
+
 
 			ros::Time trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
 			
@@ -60,7 +63,7 @@ class ImageEventHandler : public ImageEvent
 			while(trigger_time == ros::Time(0)){
 				service.call(srv);
 				trigger_time = ros::Time(srv.response.secs, srv.response.nsecs);
-				if (m_cam_ptr->TransferQueueCurrentBlockCount.GetValue() == 1){
+				if (m_cam_ptr->TransferQueueCurrentBlockCount.GetValue() >= 5){
 					ROS_WARN("Can't wait anymore for timestamp at image %d for %s", frame_id, m_cam_name.c_str());
 					break;
 				}

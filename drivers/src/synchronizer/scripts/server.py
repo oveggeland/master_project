@@ -1,4 +1,5 @@
 from __future__ import print_function
+from xml.dom.minidom import Element
 from synchronizer.srv import SetTimeStamp, GetTimeStamp, ReadySignal, ReadyRequest
 import rospy
 import sys
@@ -9,14 +10,29 @@ class TimeStamper():
         self.n_cams = n_cams
         self.stamps = np.empty(65536, rospy.Time)
         self.clients_ready = np.zeros(self.n_cams).astype(int)
-        self.last_seq = 0
+        self.seq_keys = {}
+        self.last_seqs = []
 
     
-    def get_time(self, seq):
+    def get_time(self, seq, cam_name):
         ts = self.stamps[seq]
-        if abs(seq-self.last_seq) > 1:
-            print(f"Cameras are not in sync... Offset is at least {abs(seq-self.last_seq)-1} frames")
-        self.last_seq = seq
+
+        if cam_name not in self.seq_keys.keys():
+            self.seq_keys[cam_name] = len(self.last_seqs)
+            self.last_seqs.append(seq)
+
+        elif not all(element == self.last_seqs[0] for element in self.last_seqs):
+            diffs = [(self.last_seqs[self.seq_keys[cam_name]] - element) for element in self.last_seqs]
+            max_val = max(diffs)
+            min_val = min(diffs)
+            if max_val > 0:
+                print(f"Error! Cameras are off synch! {cam_name} is ahead with {max_val} frames!")
+            if min_val < -1:
+                print(f"Error! Cameras are off synch! {cam_name} is behind with {-min_val-1} frames!")
+
+        
+        self.last_seqs[self.seq_keys[cam_name]] = seq
+
         try:
             return ts.secs, ts.nsecs
         except:
@@ -36,7 +52,7 @@ def handle_set_time_stamp(req, time_stamper):
     return True
 
 def handle_get_time_stamp(req, time_stamper):
-    return time_stamper.get_time(req.seq)
+    return time_stamper.get_time(req.seq, req.cam_name)
 
 def handle_ready_signal(req, time_stamper):
     time_stamper.clients_ready[req.id] = 1

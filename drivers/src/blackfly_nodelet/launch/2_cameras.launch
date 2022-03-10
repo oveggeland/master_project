@@ -23,7 +23,7 @@
     <rosparam param="max_auto_exp">     [30000.0, 30000.0]</rosparam>
     <rosparam param="min_auto_exp">     [5000.0, 5000.0]</rosparam>
     <!-- Fixed Exposure if not Auto (uSecs) -->
-    <rosparam param="fixed_exp">        [5000.0, 5000.0]</rosparam>
+    <rosparam param="fixed_exp">        [3000.0, 3000.0]</rosparam>
 
     <!-- Use Auto Gain Flag -->
     <rosparam param="auto_gains">       [true, true]</rosparam>
