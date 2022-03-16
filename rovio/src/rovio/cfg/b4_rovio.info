@@ -9,24 +9,24 @@ Common
 Camera0
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  0.00135847659552;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  0.709412062677;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  0.704790212372;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.00185375686574;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x -0.0816108179246;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0897012913132;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.00254074217719;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  -0.00469944265497;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.709160639015;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.705029572354;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00155094084167;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x -0.0827714271545;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0625843903389;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.00928816874489;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Camera1
 {
   CalibrationFile  ;            Camera-Calibration file for intrinsics
-  qCM_x  -0.000562770453525;                               X-entry of IMU to Camera quaterion (Hamilton)
-  qCM_y  -0.709277900658;                               Y-entry of IMU to Camera quaterion (Hamilton)
-  qCM_z  -0.704928559924;                               Z-entry of IMU to Camera quaterion (Hamilton)
-  qCM_w  0.000518007311067;                               W-entry of IMU to Camera quaterion (Hamilton)
-  MrMC_x 0.11182625468;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_y 0.0867293415424;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
-  MrMC_z -0.00387860519839;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  qCM_x  -0.00554764814533;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.708063861046;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.706095462374;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00663251806947;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.113206821902;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0625963372994;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.0105132739353;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
 }
 Init
 {
@@ -118,7 +118,7 @@ ImgUpdate
     removeNegativeFeatureAfterUpdate true;						Should feature with negative distance get removed
     maxUncertaintyToDepthRatioForDepthInitialization 0.3;		If set to 0.0 the depth is initialized with the standard value provided above, otherwise ROVIO attempts to figure out a median depth in each frame
     useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
-    doStereoInitialization false;								Should a stereo match be used for feature initialization.
+    doStereoInitialization true;								Should a stereo match be used for feature initialization.
     noiseGainForOffCamera 10.0;									Factor added on update noise if not main camera
     discriminativeSamplingDistance 0.02;						Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
     discriminativeSamplingGain 1.1;								Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).
