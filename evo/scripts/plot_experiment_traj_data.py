@@ -3,6 +3,7 @@ from cmath import nan
 from distutils.log import error
 import sys
 import os
+from tkinter import BASELINE
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -108,6 +109,46 @@ def pos_errors(data, plot_path):
     if plot_path:
         plt.savefig(os.path.join(plot_path, "pos_errors.png"))
 
+def height_errors(data, plot_path):
+    print(data)
+    for bl in sorted(data.keys()):
+        print(bl)
+        if bl not in BASELINES.keys():
+            continue
+
+        print("hwi")
+
+        plt.figure("Height errors")
+
+        # Get traj lengths and final yaw values
+        bl_data = data[bl]
+        y_trajs = [run[:, 2] for run in bl_data]
+
+
+        plot_length = max([len(traj) for traj in y_trajs])
+
+        x_vals = [0, plot_length/20]
+        upper_vals = [12.5, 12.5]
+        lower_vals = [0, 0]
+
+        plt.plot(x_vals, upper_vals, c='r', linestyle='dashed', label='Ground truth')
+        plt.plot(x_vals, lower_vals, c='r', linestyle='dashed')
+
+        rc = (np.random.rand(1)[0], np.random.rand(1)[0], np.random.rand(1)[0])
+        for traj in y_trajs:
+            line = plt.plot(np.arange(len(traj))/20, traj, color=rc)
+
+        plt.ylim(-10, 22.5)
+        plt.xlabel("t[s]")
+        plt.ylabel("Translation in y direction")
+        plt.legend()
+        plt.tight_layout()
+        if plot_path:
+            plt.savefig(os.path.join(plot_path, bl, "height_errors.png"))
+
+        plt.show()
+
+
 if __name__ == "__main__":
     print("Plot experimental traj data...")
     try:
@@ -143,6 +184,9 @@ if __name__ == "__main__":
     yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
     pos_errors_per_distance_traveled(all_data, plot_path)
     pos_errors(all_data, plot_path)
+
+    # height_errors(all_data, plot_path) # Not good?
+
 
     if len(sys.argv) > 2 and sys.argv[2] == "--dont_show":
         pass
