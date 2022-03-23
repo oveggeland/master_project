@@ -1038,7 +1038,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 if(f.mpCoordinates_->getDepthFromTriangulation(alignedCoordinates_,state.qCM(otherCam).rotate(V3D(state.MrMC(camID)-state.MrMC(otherCam))),state.qCM(otherCam)*state.qCM(camID).inverted(), *f.mpDistance_, 0.01)){
                   // Oskar
                   f.isTriangulated = true;
+                  filterState.resetFeatureCovariance(*it,initCovFeature_);
 
+                  
                   float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;
                   float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
                   float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
