@@ -17,6 +17,8 @@
   <remap from="imu0" to="/imu_acc_ar" />
   <remap from="cam0/image_raw" to="/cam0/cam0" />
   <remap from="cam1/image_raw" to="/cam1/cam1" />
+  <param name="cam0_offset" value="0.0123"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
+  <param name="cam1_offset" value="0.0123"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
   </node>
 
   <node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find rovio)/cfg/rovio.rviz">
