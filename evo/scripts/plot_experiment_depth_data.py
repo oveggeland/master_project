@@ -32,7 +32,6 @@ def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True,
         data_stack = data_stack[(data_stack[:, DIST] < 30) & (data_stack[:, DCOV] > 0) & (data_stack[:, DCOV] < 100)]
 
         # Bin on integer distances
-        print(data_stack[data_stack[:, DIST] > 60])
         data_binned, n_bins = bin_data_by_distance(data_stack)
         x = np.arange(n_bins)
 

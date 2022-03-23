@@ -1038,6 +1038,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 if(f.mpCoordinates_->getDepthFromTriangulation(alignedCoordinates_,state.qCM(otherCam).rotate(V3D(state.MrMC(camID)-state.MrMC(otherCam))),state.qCM(otherCam)*state.qCM(camID).inverted(), *f.mpDistance_, 0.01)){
                   // Oskar
                   f.isTriangulated = true;
+                  filterState.resetFeatureCovariance(*it,initCovFeature_);
 
                   /*
                   float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;

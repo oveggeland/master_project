@@ -18,7 +18,7 @@
   <param name="imu_topic_name" value="/imu_acc_ar"/>
   <param name="cam0_topic_name" value="/cam0/cam0"/>
   <param name="cam1_topic_name" value="/cam1/cam1"/>
-  <param name="cam0_offset" value="0.01235"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
-  <param name="cam1_offset" value="0.01235"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
+  <param name="cam0_offset" value="0.0123"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
+  <param name="cam1_offset" value="0.0123"/> # blackfly: timeshift[s](t_imu = t_cam + shift)
   </node>
 </launch>
