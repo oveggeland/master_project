@@ -6,11 +6,12 @@ from numpy import rad2deg
 EVO_PATH = "/home/oveggeland/master_project/evo"
 
 BASELINES = {
-    'b1': 12,
-    'b2': 14.5,
-    'b3': 17,
-    'b4': 19.5,
-    'b5': 22,
+    'b1': 12.5,
+    'b2': 15,
+    'b3': 17.5,
+    'b4': 20,
+    'b5': 22.5,
+    'b6': 25
 }
 
 FRAMEID = 0
