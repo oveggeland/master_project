@@ -12,8 +12,9 @@ if __name__ == "__main__":
     # Read bag files!
     os.system(f"python3 read_bagfiles.py {exp}")
     # Plot experimental depth data!
-    os.system(f"python3 plot_experiment_depth_data.py {exp} --dont_show")
+    os.system(f"python3 plot_experiment_depth_data.py {exp}")
     # Read bag files!
-    os.system(f"python3 plot_experiment_traj_data.py {exp} --dont_show")
+    os.system(f"python3 plot_experiment_traj_data.py {exp} {sys.argv[2]}")
+
     # Read bag files!
     os.system(f"python3 run_evo.py {exp}")
