@@ -39,6 +39,7 @@
 #include "rovio/CoordinateTransform/PixelOutput.hpp"
 #include "rovio/ZeroVelocityUpdate.hpp"
 #include "rovio/MultilevelPatchAlignment.hpp"
+#include "rovio/CoordinateTransform/LandmarkOutput.hpp"
 
 namespace rovio {
 
@@ -230,6 +231,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double discriminativeSamplingDistance_; /**<Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).*/
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
 
+  
+
 
   // Temporary
   mutable PixelOutputCT pixelOutputCT_;
@@ -239,6 +242,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable FeatureOutput featureOutput_;
   mutable MXD featureOutputCov_;
   mutable MXD featureOutputJac_;
+  // Oskar 
+  mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
+  mutable rovio::LandmarkOutput landmarkOutput_;
+
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp1_;
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp2_;
   mutable FeatureCoordinates alignedCoordinates_;
@@ -267,7 +274,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       featureOutputJac_((int)(FeatureOutput::D_),(int)(mtState::D_)),
       canditateGenerationH_(2,(int)(mtState::D_)),
       canditateGenerationDifVec_((int)(mtState::D_),1),
-      canditateGenerationPy_(2,2){
+      canditateGenerationPy_(2,2),
+      // Oskar
+      landmarkOutputImuCT_(nullptr){
     mpMultiCamera_ = nullptr;
     initCovFeature_.setIdentity();
     initDepth_ = 0.5;
@@ -393,6 +402,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   void setCamera(MultiCamera<mtState::nCam_>* mpMultiCamera){
     mpMultiCamera_ = mpMultiCamera;
     transformFeatureOutputCT_.mpMultiCamera_ = mpMultiCamera;
+    //Oskar
+    landmarkOutputImuCT_.mpMultiCamera_ = mpMultiCamera;
+
   }
 
   /** \brief Sets the innovation term.
@@ -489,6 +501,23 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       }
       return false;
     }
+
+    // Todo: Oskar stuff, check if planar here?
+    std::cout << "extra outlier check for feature" << ID << std::endl;
+    // state is rovio state not lightweight, so state.aux() is available
+    // This is directly from RovioNode.hpp
+    // Get landmark output
+
+    landmarkOutputImuCT_.setFeatureID(ID);
+    landmarkOutputImuCT_.transformState(state,landmarkOutput_);
+    // landmarkOutputImuCT_.transformCovMat(state,cov,landmarkOutputCov_);
+    const Eigen::Vector3f MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+
+    const float x = MrMP[0];
+    const float y = MrMP[1];
+    const float z = MrMP[2];
+
+    std::cout << "active feature is at location " << x << ", " << y << ", " << z << std::endl;
 
     if(patchRejectionTh_ >= 0){
       if(!mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
