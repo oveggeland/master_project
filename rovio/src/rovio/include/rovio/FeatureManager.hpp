@@ -143,6 +143,9 @@ class FeatureSetManager{
   int maxIdx_;  /**<Current maximum array/set index. Number of MultilevelPatchFeature, which have already been inserted into the set. */
   const MultiCamera<nCam>* mpMultiCamera_;
 
+  // Oskar
+  float depths_[nMax]; // Array of depths used for cluster outlier detection for vtol scenarios
+
   /** \brief Constructor
    */
   FeatureSetManager(const MultiCamera<nCam>* mpMultiCamera){
@@ -188,6 +191,8 @@ class FeatureSetManager{
     maxIdx_ = 0;
     for(unsigned int i=0;i<nMax;i++){
       isValid_[i] = false;
+      // Oskar
+      depths_[i] = 2;
     }
   }
 

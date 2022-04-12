@@ -40,6 +40,7 @@
 #include "rovio/ZeroVelocityUpdate.hpp"
 #include "rovio/MultilevelPatchAlignment.hpp"
 #include "rovio/CoordinateTransform/LandmarkOutput.hpp"
+#include "rovio/kmeans.hpp"
 
 namespace rovio {
 
@@ -245,6 +246,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   // Oskar 
   mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
   mutable rovio::LandmarkOutput landmarkOutput_;
+  mutable MXD landmarkOutputCov_;
+  float cluster_center;
 
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp1_;
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp2_;
@@ -276,7 +279,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       canditateGenerationDifVec_((int)(mtState::D_),1),
       canditateGenerationPy_(2,2),
       // Oskar
-      landmarkOutputImuCT_(nullptr){
+      landmarkOutputImuCT_(nullptr),
+      landmarkOutputCov_(3,3){
     mpMultiCamera_ = nullptr;
     initCovFeature_.setIdentity();
     initDepth_ = 0.5;
@@ -494,6 +498,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     transformFeatureOutputCT_.setOutputCameraID(activeCamID);
     transformFeatureOutputCT_.transformState(state,featureOutput_);
 
+
     if(!hasConverged_){
       if(verbose_) std::cout << "    \033[31mREJECTED (iterations did no converge)\033[0m" << std::endl;
       if(mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
@@ -502,22 +507,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       return false;
     }
 
-    // Todo: Oskar stuff, check if planar here?
-    std::cout << "extra outlier check for feature" << ID << std::endl;
-    // state is rovio state not lightweight, so state.aux() is available
-    // This is directly from RovioNode.hpp
-    // Get landmark output
-
-    landmarkOutputImuCT_.setFeatureID(ID);
-    landmarkOutputImuCT_.transformState(state,landmarkOutput_);
-    // landmarkOutputImuCT_.transformCovMat(state,cov,landmarkOutputCov_);
-    const Eigen::Vector3f MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
-
-    const float x = MrMP[0];
-    const float y = MrMP[1];
-    const float z = MrMP[2];
-
-    std::cout << "active feature is at location " << x << ", " << y << ", " << z << std::endl;
 
     if(patchRejectionTh_ >= 0){
       if(!mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
@@ -983,6 +972,58 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
     }
+
+    // Oskar removes bad features based on an awesome clustering algorithm!
+    // 1. Compute cluster for all valid points
+    float* src= filterState.fsm_.depths_;
+    std::vector<float> dest;
+
+    int counter = 0;
+    for (int i = 0; i <  mtState::nMax_; i++){
+      landmarkOutputImuCT_.setFeatureID(i);
+      cov = filterState.cov_;
+      landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
+
+      if (sqrt(landmarkOutputCov_(1,1)) < 2){ // Check if depth std is bigger than 2 meters, cluster only on "safe" points
+        dest.push_back(src[i]);
+        counter ++;
+      }
+    }
+
+  
+    if (counter > 5){ // Only filter if at least 5 good points!
+      cluster_center = kmeans(dest, 1);
+      MXD& cov = filterState.cov_;
+      Eigen::Vector3f MrMP;
+      Eigen::Matrix3f cov_MrMP;
+      float y = 0;
+      float y_cov = 0;
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (filterState.fsm_.isValid_[i]){
+          landmarkOutputImuCT_.setFeatureID(i);
+          landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
+          landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
+          
+          MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+          cov_MrMP = landmarkOutputCov_.cast<float>();
+
+          // TODO: Improve y/depth estimate by transforming to world frame or aligning with gravity direction (need other dataset)
+          y = MrMP[1];
+          y_cov = cov_MrMP(1,1);
+          filterState.fsm_.depths_[i] = y;
+
+          if (abs(y-cluster_center) - 2 > sqrt(y_cov)){
+            // Error! 
+            // TODO:
+            filterState.fsm_.isValid_[i] = false;
+            filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+          }
+
+        }
+      }
+    }
+
+
     if(verbose_) std::cout << " | ";
     // Check if enough free features, enforce removal
     int requiredFreeFeature = mtState::nMax_*minTrackedAndFreeFeatures_-countTracked;
@@ -1078,8 +1119,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   initCovFeature_(0, 0) = pow(depth_uncertainty, 2);     // TODO: Find out if this should be squared or not
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   initCovFeature_(0, 0) = temp;
-                  */
+                  
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
+                  */
                 }
               } else {
                 if(doFrameVisualisation_){
