@@ -21,7 +21,7 @@ int findClusterID(vector<float> centers, int value){
     return best_center;
 }
 
-float kmeans(vector<float> &A, int K){
+vector<float> kmeans(vector<float> &A, int K){
     vector<float> centers;
     unordered_set<int> dedup;
 
@@ -64,7 +64,7 @@ float kmeans(vector<float> &A, int K){
 
         float delta = abs(lastErr - err);
 
-        cout << "error " << err << " delta " << delta << endl;
+        //cout << "error " << err << " delta " << delta << endl;
 
         if(delta < 0.1)break;
 
@@ -78,7 +78,7 @@ float kmeans(vector<float> &A, int K){
 
     }
 
-    
+    /*
     // print out results
     for(int i = 0; i<K; i++){
         cout<<"Cluster Center "<<i<< " : "<<centers[i]<<endl;
@@ -91,8 +91,9 @@ float kmeans(vector<float> &A, int K){
         }
         cout<<endl;
     }
+    */
 
-    return centers[0];
+    return centers;
 }
 
 /*

@@ -96,8 +96,16 @@ ImgUpdate
     useIntensitySqewForAlignment true;							Should an intensity sqew between the patches be considered
     removeNegativeFeatureAfterUpdate true;						Should feature with negative distance get removed
     maxUncertaintyToDepthRatioForDepthInitialization 0.3;		If set to 0.0 the depth is initialized with the standard value provided above, otherwise ROVIO attempts to figure out a median depth in each frame
-    useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
+    useCrossCameraMeasurements false;							Should cross measurements between frame be used. Might be turned of in calibration phase.
     doStereoInitialization false;								Should a stereo match be used for feature initialization.
+    
+    useClusterFiltering true;                                   Outlier detection by assuming that features should be on the same plane
+    numberOfClusters 1;                                         Number of clusters assumed to exist
+    depthDirection 0;                                           Direction of planar landing ground 0=x(forward), 1=y(sideways), 2=z(downwards). 2 is most commen for actual vtol!
+    minClusterDepth 5;                                          Minimum depth to be used in clustering 
+    minClusterCount 10;                                          Minimum viable cluster nodes to use filtering method
+    clusterDistanceThresh 0;                                    Distance from cluster to be accounted an outlier
+    
     noiseGainForOffCamera 10.0;									Factor added on update noise if not main camera
     discriminativeSamplingDistance 0.02;						Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
     discriminativeSamplingGain 1.1;								Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).

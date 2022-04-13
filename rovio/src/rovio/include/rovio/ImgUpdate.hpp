@@ -231,9 +231,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double alignmentGradientExponent_; /**<Exponent used for gradient based weighting of residuals.*/
   double discriminativeSamplingDistance_; /**<Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).*/
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
-
-  
-
+  // Oskar
+  bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
+  int numberOfClusters_;
+  int depthDirection_;
+  double minClusterDepth_;
+  double minClusterCount_;
+  double clusterDistanceThresh_;
 
   // Temporary
   mutable PixelOutputCT pixelOutputCT_;
@@ -377,6 +381,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("alignmentGaussianWeightingSigma",alignmentGaussianWeightingSigma_);
     alignmentGradientExponent_ = static_cast<double>(alignment_.gradientExponent_);
     doubleRegister_.registerScalar("alignmentGradientExponent",alignmentGradientExponent_);
+    //Oskar
+    boolRegister_.registerScalar("useClusterFiltering",useClusterFiltering_);
+    intRegister_.registerScalar("numberOfClusters", numberOfClusters_);
+    intRegister_.registerScalar("depthDirection", depthDirection_);
+    doubleRegister_.registerScalar("minClusterDepth", minClusterDepth_);
+    doubleRegister_.registerScalar("minClusterCount", minClusterCount_);
+    doubleRegister_.registerScalar("clusterDistanceThresh", clusterDistanceThresh_);
   };
 
   /** \brief Destructor
@@ -615,6 +626,71 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     }
     filterState.state_.aux().activeFeature_ = 0;
     filterState.state_.aux().activeCameraCounter_ = 0;
+
+
+    // Oskar removes bad features based on an awesome clustering algorithm!
+    if (useClusterFiltering_){
+      // Variables for storing of landmark positions and covariance
+      Eigen::Vector3f MrMP;
+      MXD& cov = filterState.cov_;
+      Eigen::Matrix3f cov_MrMP;
+
+      float* src= filterState.fsm_.depths_;
+      std::vector<float> dest;
+
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (src[i] > minClusterDepth_){
+          dest.push_back(src[i]);
+        }
+      }
+
+      V3D wP;
+      V3D wP_cov;
+      float depth;
+      float depth_cov;
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (filterState.fsm_.isValid_[i]){
+          landmarkOutputImuCT_.setFeatureID(i);
+          landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
+          landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
+          
+          MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+          cov_MrMP = landmarkOutputCov_.cast<float>();
+
+          wP = filterState.state_.qWM().rotate(V3D(MrMP[0], MrMP[1], MrMP[2])) + filterState.state_.WrWM();
+          wP_cov = filterState.state_.qWM().rotate(V3D(cov_MrMP(0, 0), cov_MrMP(1, 1), cov_MrMP(2, 2)));
+
+          depth = wP[depthDirection_];
+          depth_cov = wP_cov[depthDirection_];
+          filterState.fsm_.depths_[i] = depth;
+
+          /*
+          std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
+          std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
+          std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
+          std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl << std::endl;
+          */
+
+          if (dest.size() > minClusterCount_){
+            vector<float> centers = kmeans(dest, numberOfClusters_);// TODO: Generalize to several centers Maybe use silhouette method https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
+
+            // See if the point is part of any cluster
+            bool confirmed = false;
+            for (auto center: centers){
+              if ((abs(depth-center) - 3*sqrt(depth_cov) < clusterDistanceThresh_)){  // Check if distance between feature and cluster center is smaller than a 3-sigma window + a threshold
+                confirmed = true;
+              }
+            }
+
+            if (!confirmed){
+              std::cout << "invalid point at " << depth << " with cov " << sqrt(depth_cov) << std::endl;
+              filterState.fsm_.isValid_[i] = false;
+              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+            }
+          }
+        }
+      }
+    }
 
 
     /* Detect Image changes by looking at the feature patches between current and previous image (both at the current feature location)
@@ -972,56 +1048,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
     }
-
-    // Oskar removes bad features based on an awesome clustering algorithm!
-    // 1. Compute cluster for all valid points
-    float* src= filterState.fsm_.depths_;
-    std::vector<float> dest;
-
-    int counter = 0;
-    for (int i = 0; i <  mtState::nMax_; i++){
-      landmarkOutputImuCT_.setFeatureID(i);
-      cov = filterState.cov_;
-      landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
-
-      if (sqrt(landmarkOutputCov_(1,1)) < 2){ // Check if depth std is bigger than 2 meters, cluster only on "safe" points
-        dest.push_back(src[i]);
-        counter ++;
-      }
-    }
-
-  
-    if (counter > 5){ // Only filter if at least 5 good points!
-      cluster_center = kmeans(dest, 1);
-      MXD& cov = filterState.cov_;
-      Eigen::Vector3f MrMP;
-      Eigen::Matrix3f cov_MrMP;
-      float y = 0;
-      float y_cov = 0;
-      for (int i = 0; i <  mtState::nMax_; i++){
-        if (filterState.fsm_.isValid_[i]){
-          landmarkOutputImuCT_.setFeatureID(i);
-          landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
-          landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
-          
-          MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
-          cov_MrMP = landmarkOutputCov_.cast<float>();
-
-          // TODO: Improve y/depth estimate by transforming to world frame or aligning with gravity direction (need other dataset)
-          y = MrMP[1];
-          y_cov = cov_MrMP(1,1);
-          filterState.fsm_.depths_[i] = y;
-
-          if (abs(y-cluster_center) - 2 > sqrt(y_cov)){
-            // Error! 
-            // TODO:
-            filterState.fsm_.isValid_[i] = false;
-            filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
-          }
-
-        }
-      }
-    }
+    
 
 
     if(verbose_) std::cout << " | ";
