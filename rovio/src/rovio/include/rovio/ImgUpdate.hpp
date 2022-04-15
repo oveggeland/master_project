@@ -636,13 +636,19 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       Eigen::Matrix3f cov_MrMP;
 
       float* src= filterState.fsm_.depths_;
-      std::vector<float> dest;
+      std::vector<float> dest = {};
 
       for (int i = 0; i <  mtState::nMax_; i++){
         if (src[i] > minClusterDepth_){
           dest.push_back(src[i]);
         }
       }
+
+      vector<float> centers = {};
+      if (dest.size() > minClusterCount_){
+        centers = kmeans(dest, numberOfClusters_);// TODO: Generalize to several centers Maybe use silhouette method https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
+      }
+
 
       V3D wP;
       V3D wP_cov;
@@ -664,15 +670,14 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           depth_cov = wP_cov[depthDirection_];
           filterState.fsm_.depths_[i] = depth;
 
-          /*
+          std::cout << "Feature " << i << std::endl;
           std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
           std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
           std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
           std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl << std::endl;
-          */
+          
 
-          if (dest.size() > minClusterCount_){
-            vector<float> centers = kmeans(dest, numberOfClusters_);// TODO: Generalize to several centers Maybe use silhouette method https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
+          if (!centers.empty()){
 
             // See if the point is part of any cluster
             bool confirmed = false;
