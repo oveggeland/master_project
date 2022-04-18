@@ -644,8 +644,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
 
-      std::vector<float> centers = {};
-      std::vector<float> deviations = {};
+      float centers[numberOfClusters_] = {-1};
+      float deviations[numberOfClusters_] = {-1};
       if (valid_depths.size() > minClusterCount_){
         kmeans(valid_depths, centers, deviations, numberOfClusters_);
 
@@ -686,7 +686,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
           
 
-          if (!centers.empty()){
+          if (centers[0] != -1){
 
             // See if the point is part of any cluster
             bool confirmed = false;

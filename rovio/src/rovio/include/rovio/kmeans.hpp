@@ -5,19 +5,17 @@
 
 using namespace std;
 
-int findClusterID(vector<float> centers, vector<float> deviations, float value){
-    int count = 0;
+int findClusterID(float* centers, float* deviations, float value, int K){
     int best_center = -1;
     float best_dist = INFINITY;
 
-    for (auto item: centers){
-        std::cout << "Value: " << value << " center: " << item << " dev: " << deviations[count] << std::endl;
-        float dist = abs(value - item);
-        if (dist < deviations[count] && dist < best_dist){
+    for (int k=0; k<K; k++){
+        std::cout << "Value: " << value << " center: " << centers[k] << " dev: " << deviations[k] << std::endl;
+        float dist = abs(value - centers[k]);
+        if (dist < 3*deviations[k] && dist < best_dist){
             best_dist = dist;
-            best_center = count;
+            best_center = k;
         }
-        count ++;
     }
     if (best_center == -1){
         std::cout << "Value " << value << " is filtered out from kmeans" << std::endl;
@@ -25,24 +23,25 @@ int findClusterID(vector<float> centers, vector<float> deviations, float value){
     return best_center;
 }
 
-void kmeans(vector<float> &A, vector<float> &centers, vector<float> &deviations, int K){
+void kmeans(vector<float> &A, float* centers, float* deviations, int K){
     unordered_set<int> dedup;
 
-    while(centers.size() < K){
+    int count = 0;
+    while(count < K){
 
         int rid = rand()%A.size();
 
         if(dedup.find(A[rid]) == dedup.end()){
-            centers.push_back(A[rid]);
-            deviations.push_back(INFINITY);     
+            centers[count] = A[rid];
+            deviations[count] = INFINITY;     
             dedup.insert(A[rid]);
+            count ++;
         }
-
     }
     dedup.clear();
 
-    vector<int> cluster(A.size(),-1);
-    vector<int> prev_cnt(K, 0);
+    int cluster[A.size()] = {-1};
+    int prev_cnt[K] = {0};
     float lastErr = 0;
     
     
@@ -51,14 +50,14 @@ void kmeans(vector<float> &A, vector<float> &centers, vector<float> &deviations,
 
         //assigning to cluster
         for(int i = 0; i<A.size(); i++){
-            int cid = findClusterID(centers, deviations, A[i]);
+            int cid = findClusterID(centers, deviations, A[i], K);
             cluster[i] = cid;
         }
 
         //recalculate centers per cluster
-        vector<int> cnt(K, 0);
-        vector<int> sum(K, 0);
-        vector<int> tot_square_err(K, 0);
+        int cnt[K] = {0};
+        float sum[K] = {0};
+        float tot_square_err[K] = {0};
         float err=0;
         float tot_err=0;
         
@@ -80,12 +79,15 @@ void kmeans(vector<float> &A, vector<float> &centers, vector<float> &deviations,
 
         // Termination criteria!
         float delta = abs(lastErr - tot_err);
+        lastErr = tot_err;
+
         if(delta < 0.1){
             bool done = true;
             for (int k = 0; k<K; k++){
                 if (cnt[k] != prev_cnt[k]){
                     done = false;
                 }
+                prev_cnt[k] = cnt[k];
             }
             if (done){
                 break;
@@ -94,14 +96,14 @@ void kmeans(vector<float> &A, vector<float> &centers, vector<float> &deviations,
         };
 
 
-        lastErr = tot_err;
-        prev_cnt = cnt;
-
         //assign new centers
 
         for(int i =0; i<K; i++){
+            std::cout << "Sum is " << sum[i] << " square error is " << tot_square_err << " count is " << cnt[i] << std::endl;
             centers[i] = (static_cast<float>(sum[i])/cnt[i]);
+            std::cout << "Center is " << centers[i] << std::endl;
             deviations[i] = sqrt(static_cast<float>(tot_square_err[i])/cnt[i]);
+            std::cout << "Std is " << deviations[i] << std::endl;
         }
 
     }
