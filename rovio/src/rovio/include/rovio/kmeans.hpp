@@ -21,8 +21,7 @@ int findClusterID(vector<float> centers, int value){
     return best_center;
 }
 
-vector<float> kmeans(vector<float> &A, int K){
-    vector<float> centers;
+void kmeans(vector<float> &A, vector<float> &centers, vector<float> &deviations, int K){
     unordered_set<int> dedup;
 
     while(centers.size() < K){
@@ -31,6 +30,7 @@ vector<float> kmeans(vector<float> &A, int K){
 
         if(dedup.find(A[rid]) == dedup.end()){
             centers.push_back(A[rid]);
+            deviations.push_back(0);
             dedup.insert(A[rid]);
         }
 
@@ -51,7 +51,10 @@ vector<float> kmeans(vector<float> &A, int K){
         //recalculate centers per cluster
         vector<int> cnt(K, 0);
         vector<int> sum(K, 0);
+        vector<int> tot_square_err(K, 0);
         float err=0;
+        float tot_err=0;
+        
 
         for(int i = 0; i<A.size(); i++){
             int cid = cluster[i];
@@ -59,21 +62,24 @@ vector<float> kmeans(vector<float> &A, int K){
             sum[cid]+=A[i];
 
             //error
-            err+=abs(static_cast<float>(A[i])-centers[cid]);
+            err=abs(static_cast<float>(A[i])-centers[cid]);
+            tot_err += err;
+            tot_square_err[cid] += pow(err, 2);
         }
 
-        float delta = abs(lastErr - err);
+        float delta = abs(lastErr - tot_err);
 
         //cout << "error " << err << " delta " << delta << endl;
 
         if(delta < 0.1)break;
 
-        lastErr = err;
+        lastErr = tot_err;
 
         //assign new centers
 
         for(int i =0; i<K; i++){
             centers[i] = (static_cast<float>(sum[i])/cnt[i]);
+            deviations[i] = sqrt(static_cast<float>(tot_square_err[i])/cnt[i]);
         }
 
     }
@@ -93,7 +99,7 @@ vector<float> kmeans(vector<float> &A, int K){
     }
     */
 
-    return centers;
+    // return centers;
 }
 
 /*

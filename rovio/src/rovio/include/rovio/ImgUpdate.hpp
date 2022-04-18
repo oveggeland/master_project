@@ -635,23 +635,30 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       MXD& cov = filterState.cov_;
       Eigen::Matrix3f cov_MrMP;
 
-      float* src= filterState.fsm_.depths_;
-      std::vector<float> dest = {};
+      float* depths= filterState.fsm_.depths_;
+      std::vector<float> valid_depths = {};
 
       for (int i = 0; i <  mtState::nMax_; i++){
-        if (src[i] > minClusterDepth_){
-          dest.push_back(src[i]);
+        if (depths[i] > minClusterDepth_){
+          valid_depths.push_back(depths[i]);
         }
       }
 
-      vector<float> centers = {};
-      if (dest.size() > minClusterCount_){
-        centers = kmeans(dest, numberOfClusters_);// TODO: Generalize to several centers Maybe use silhouette method https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
+      std::vector<float> centers = {};
+      std::vector<float> deviations = {};
+      if (valid_depths.size() > minClusterCount_){
+        kmeans(valid_depths, centers, deviations, numberOfClusters_);
+
+        for (int i = 0; i<numberOfClusters_; i++){
+          std::cout << "Center " << i << ": " << centers[i] << std::endl;
+          std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
+        }
       }
 
 
       V3D wP;
       V3D wP_cov;
+      V3D wP_std;
       float depth;
       float depth_cov;
       for (int i = 0; i <  mtState::nMax_; i++){
@@ -665,6 +672,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
 
           wP = filterState.state_.qWM().rotate(V3D(MrMP[0], MrMP[1], MrMP[2])) + filterState.state_.WrWM();
           wP_cov = filterState.state_.qWM().rotate(V3D(cov_MrMP(0, 0), cov_MrMP(1, 1), cov_MrMP(2, 2)));
+          wP_std = V3D(sqrt(wP_cov[0]), sqrt(wP_cov[1]), sqrt(wP_cov[2]));
 
           depth = wP[depthDirection_];
           depth_cov = wP_cov[depthDirection_];
@@ -675,6 +683,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
           std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
           std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl << std::endl;
+          std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
           
 
           if (!centers.empty()){
