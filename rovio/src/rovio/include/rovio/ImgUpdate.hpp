@@ -660,7 +660,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       V3D wP_cov;
       V3D wP_std;
       float depth;
-      float depth_cov;
+      float depth_std;
       for (int i = 0; i <  mtState::nMax_; i++){
         if (filterState.fsm_.isValid_[i]){
           landmarkOutputImuCT_.setFeatureID(i);
@@ -675,29 +675,30 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           wP_std = V3D(sqrt(wP_cov[0]), sqrt(wP_cov[1]), sqrt(wP_cov[2]));
 
           depth = wP[depthDirection_];
-          depth_cov = wP_cov[depthDirection_];
+          depth_std = wP_std[depthDirection_];
           filterState.fsm_.depths_[i] = depth;
 
+          /*
           std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << std::endl;
           std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
           std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
           std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
           std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl;
           std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
-          
+          */
 
           if (centers[0] != -1){
 
             // See if the point is part of any cluster
             bool confirmed = false;
-            for (auto center: centers){
-              if ((abs(depth-center) - 3*sqrt(depth_cov) < clusterDistanceThresh_)){  // Check if distance between feature and cluster center is smaller than a 3-sigma window + a threshold
+            for (int k=0; k<numberOfClusters_; k++){
+              if ((abs(depth-centers[k]) - depth_std < deviations[k])){  // Check if the 1-sigma 
                 confirmed = true;
               }
             }
 
             if (!confirmed){
-              std::cout << "invalid point at " << depth << " with cov " << sqrt(depth_cov) << std::endl;
+              std::cout << "invalid point at " << depth << " with std " << depth_std << std::endl;
               filterState.fsm_.isValid_[i] = false;
               filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
             }
