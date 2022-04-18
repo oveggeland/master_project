@@ -678,11 +678,11 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           depth_cov = wP_cov[depthDirection_];
           filterState.fsm_.depths_[i] = depth;
 
-          std::cout << "Feature " << i << std::endl;
+          std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << std::endl;
           std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
           std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
           std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
-          std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl << std::endl;
+          std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl;
           std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
           
 
