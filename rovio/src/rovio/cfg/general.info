@@ -99,15 +99,17 @@ ImgUpdate
     ; Here is my (Oskars) most commonly changed parameters
     initDepth 0.05;												Initial value for the initial distance parameter
 
-    useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
+    useCrossCameraMeasurements false;							Should cross measurements between frame be used. Might be turned of in calibration phase.
     doStereoInitialization false;								Should a stereo match be used for feature initialization.
     
     useClusterFiltering false;                                   Outlier detection by assuming that features should be on the same plane
+    clusterVerbose false;                                        Verbose debugging prints
     numberOfClusters 1;                                         Number of clusters assumed to exist
     depthDirection 0;                                           Direction of planar landing ground 0=x(forward), 1=y(sideways), 2=z(downwards). 2 is most commen for actual vtol!
     minClusterDepth 5;                                          Minimum depth to be used in clustering 
-    minClusterCount 10;                                          Minimum viable cluster nodes to use filtering method
-    clusterDistanceThresh 3;                                    Distance from cluster to be accounted an outlier
+    minClusterCount 10;                                         Minimum viable cluster nodes to use filtering method
+    clusterDistanceThresh 0;                                    Distance from cluster to be accounted an outlier
+    clusterUncertaintyThresh 0.15;                              Threshold of uncertainty for a feature to be used in clustering
     
     noiseGainForOffCamera 10.0;									Factor added on update noise if not main camera
     discriminativeSamplingDistance 0.02;						Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
