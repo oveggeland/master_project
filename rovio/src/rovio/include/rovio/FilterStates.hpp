@@ -589,9 +589,53 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
    *  @param fMeasInit - Acceleration-Vector which should be used for initializing the attitude of the IMU.
    */
   void initWithAccelerometer(const V3D& fMeasInit){
+    /* Oskar
+    I want to align the IMU y direction with the world x direction. 
+    This can by using the gravity aligned tranformation to transform the IMU unitY vector and finding the transformation from the resultant to unitX vector.
+    */
+    V3D unitX(1,0,0);
+    V3D unitY(0,1,0);
     V3D unitZ(0,0,1);
+
     if(fMeasInit.norm()>1e-6){
       state_.qWM().setFromVectors(fMeasInit,unitZ);
+
+      V3D wf_unitX = state_.qWM().rotate(unitX);
+      std::cout << "Robot unit X in wf is " << wf_unitX[0] << ", " << wf_unitX[1] << ", " << wf_unitX[2] << std::endl;
+      V3D wf_unitY = state_.qWM().rotate(unitY);
+      std::cout << "Robot unit Y in wf is " << wf_unitY[0] << ", " << wf_unitY[1] << ", " << wf_unitY[2] << std::endl;
+      V3D wf_unitZ = state_.qWM().rotate(unitZ);
+      std::cout << "Robot unit Z in wf is " << wf_unitZ[0] << ", " << wf_unitZ[1] << ", " << wf_unitZ[2] << std::endl << std::endl;
+
+      QPD align_rot;
+      align_rot.setFromVectors(wf_unitY, unitX);
+
+      wf_unitX = align_rot.rotate(wf_unitX);
+      std::cout << "Robot unit X in wf is now " << wf_unitX[0] << ", " << wf_unitX[1] << ", " << wf_unitX[2] << std::endl;
+      wf_unitY = align_rot.rotate(wf_unitY);
+      std::cout << "Robot unit Y in wf is now " << wf_unitY[0] << ", " << wf_unitY[1] << ", " << wf_unitY[2] << std::endl;
+      wf_unitZ = align_rot.rotate(wf_unitZ);
+      std::cout << "Robot unit Z in wf is now " << wf_unitZ[0] << ", " << wf_unitZ[1] << ", " << wf_unitZ[2] << std::endl << std::endl;
+
+      // Align with straight forward stuff
+      QPD conc_rot = state_.qWM()*align_rot;
+
+      V3D x_test = conc_rot.rotate(unitX);
+      std::cout << "X test is " << x_test[0] << ", " << x_test[1] << ", " << x_test[2] << std::endl;
+      V3D y_test = conc_rot.rotate(unitY);
+      std::cout << "Y test is " << y_test[0] << ", " << y_test[1] << ", " << y_test[2] << std::endl;
+      V3D z_test = conc_rot.rotate(unitZ);
+      std::cout << "Z test is " << z_test[0] << ", " << z_test[1] << ", " << z_test[2] << std::endl << std::endl;
+
+      conc_rot = align_rot*state_.qWM();
+      x_test = conc_rot.rotate(unitX);
+      std::cout << "X test is " << x_test[0] << ", " << x_test[1] << ", " << x_test[2] << std::endl;
+      y_test = conc_rot.rotate(unitY);
+      std::cout << "Y test is " << y_test[0] << ", " << y_test[1] << ", " << y_test[2] << std::endl;
+      z_test = conc_rot.rotate(unitZ);
+      std::cout << "Z test is " << z_test[0] << ", " << z_test[1] << ", " << z_test[2] << std::endl << std::endl;
+
+      state_.qWM() = conc_rot;
     } else {
       state_.qWM().setIdentity();
     }

@@ -25,6 +25,7 @@ def run_folder_data(rel_dir):
             bag_name = os.path.split(bag)[-1]
             if not os.path.isdir(os.path.join(rel_dir, "rovio")):
                 os.mkdir(os.path.join(rel_dir, "rovio"))
+            print(f"Running rovio bag {bag_name} with baseline {baseline}")
             os.system(f'roslaunch rovio my_rovio.launch baseline:={baseline} rovio_bag:={bag_name} folder:={rel_dir} record:=true')
 
 

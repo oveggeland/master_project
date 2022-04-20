@@ -39,6 +39,8 @@
 #include "rovio/CoordinateTransform/PixelOutput.hpp"
 #include "rovio/ZeroVelocityUpdate.hpp"
 #include "rovio/MultilevelPatchAlignment.hpp"
+#include "rovio/CoordinateTransform/LandmarkOutput.hpp"
+#include "rovio/kmeans.hpp"
 
 namespace rovio {
 
@@ -229,7 +231,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double alignmentGradientExponent_; /**<Exponent used for gradient based weighting of residuals.*/
   double discriminativeSamplingDistance_; /**<Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).*/
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
-
+  // Oskar
+  bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
+  int numberOfClusters_;
+  int depthDirection_;
+  double minClusterDepth_;
+  double minClusterCount_;
+  double clusterDistanceThresh_;
 
   // Temporary
   mutable PixelOutputCT pixelOutputCT_;
@@ -239,6 +247,12 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable FeatureOutput featureOutput_;
   mutable MXD featureOutputCov_;
   mutable MXD featureOutputJac_;
+  // Oskar 
+  mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
+  mutable rovio::LandmarkOutput landmarkOutput_;
+  mutable MXD landmarkOutputCov_;
+  float cluster_center;
+
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp1_;
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp2_;
   mutable FeatureCoordinates alignedCoordinates_;
@@ -267,7 +281,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       featureOutputJac_((int)(FeatureOutput::D_),(int)(mtState::D_)),
       canditateGenerationH_(2,(int)(mtState::D_)),
       canditateGenerationDifVec_((int)(mtState::D_),1),
-      canditateGenerationPy_(2,2){
+      canditateGenerationPy_(2,2),
+      // Oskar
+      landmarkOutputImuCT_(nullptr),
+      landmarkOutputCov_(3,3){
     mpMultiCamera_ = nullptr;
     initCovFeature_.setIdentity();
     initDepth_ = 0.5;
@@ -364,6 +381,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("alignmentGaussianWeightingSigma",alignmentGaussianWeightingSigma_);
     alignmentGradientExponent_ = static_cast<double>(alignment_.gradientExponent_);
     doubleRegister_.registerScalar("alignmentGradientExponent",alignmentGradientExponent_);
+    //Oskar
+    boolRegister_.registerScalar("useClusterFiltering",useClusterFiltering_);
+    intRegister_.registerScalar("numberOfClusters", numberOfClusters_);
+    intRegister_.registerScalar("depthDirection", depthDirection_);
+    doubleRegister_.registerScalar("minClusterDepth", minClusterDepth_);
+    doubleRegister_.registerScalar("minClusterCount", minClusterCount_);
+    doubleRegister_.registerScalar("clusterDistanceThresh", clusterDistanceThresh_);
   };
 
   /** \brief Destructor
@@ -393,6 +417,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   void setCamera(MultiCamera<mtState::nCam_>* mpMultiCamera){
     mpMultiCamera_ = mpMultiCamera;
     transformFeatureOutputCT_.mpMultiCamera_ = mpMultiCamera;
+    //Oskar
+    landmarkOutputImuCT_.mpMultiCamera_ = mpMultiCamera;
+
   }
 
   /** \brief Sets the innovation term.
@@ -482,6 +509,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     transformFeatureOutputCT_.setOutputCameraID(activeCamID);
     transformFeatureOutputCT_.transformState(state,featureOutput_);
 
+
     if(!hasConverged_){
       if(verbose_) std::cout << "    \033[31mREJECTED (iterations did no converge)\033[0m" << std::endl;
       if(mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
@@ -489,6 +517,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       }
       return false;
     }
+
 
     if(patchRejectionTh_ >= 0){
       if(!mlpTemp1_.isMultilevelPatchInFrame(meas_.aux().pyr_[activeCamID],featureOutput_.c(),startLevel_,false)){
@@ -597,6 +626,86 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     }
     filterState.state_.aux().activeFeature_ = 0;
     filterState.state_.aux().activeCameraCounter_ = 0;
+
+
+    // Oskar removes bad features based on an awesome clustering algorithm!
+    if (useClusterFiltering_){
+      // Variables for storing of landmark positions and covariance
+      Eigen::Vector3f MrMP;
+      MXD& cov = filterState.cov_;
+      Eigen::Matrix3f cov_MrMP;
+
+      float* depths= filterState.fsm_.depths_;
+      std::vector<float> valid_depths = {};
+
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (depths[i] > minClusterDepth_){
+          valid_depths.push_back(depths[i]);
+        }
+      }
+
+      float centers[numberOfClusters_] = {-1};
+      float deviations[numberOfClusters_] = {-1};
+      if (valid_depths.size() > minClusterCount_){
+        kmeans(valid_depths, centers, deviations, numberOfClusters_);
+
+        for (int i = 0; i<numberOfClusters_; i++){
+          std::cout << "Center " << i << ": " << centers[i] << std::endl;
+          std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
+        }
+      }
+
+
+      V3D wP;
+      V3D wP_cov;
+      V3D wP_std;
+      float depth;
+      float depth_std;
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (filterState.fsm_.isValid_[i]){
+          landmarkOutputImuCT_.setFeatureID(i);
+          landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
+          landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
+          
+          MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+          cov_MrMP = landmarkOutputCov_.cast<float>();
+
+          wP = filterState.state_.qWM().rotate(V3D(MrMP[0], MrMP[1], MrMP[2])) + filterState.state_.WrWM();
+          wP_cov = filterState.state_.qWM().rotate(V3D(cov_MrMP(0, 0), cov_MrMP(1, 1), cov_MrMP(2, 2)));
+          wP_std = V3D(sqrt(wP_cov[0]), sqrt(wP_cov[1]), sqrt(wP_cov[2]));
+
+          depth = wP[depthDirection_];
+          depth_std = wP_std[depthDirection_];
+          filterState.fsm_.depths_[i] = depth;
+
+          /*
+          std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << std::endl;
+          std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
+          std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
+          std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
+          std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl;
+          std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
+          */
+
+          if (centers[0] != -1){
+
+            // See if the point is part of any cluster
+            bool confirmed = false;
+            for (int k=0; k<numberOfClusters_; k++){
+              if ((abs(depth-centers[k]) - depth_std < deviations[k])){  // Check if the 1-sigma 
+                confirmed = true;
+              }
+            }
+
+            if (!confirmed){
+              std::cout << "invalid point at " << depth << " with std " << depth_std << std::endl;
+              filterState.fsm_.isValid_[i] = false;
+              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+            }
+          }
+        }
+      }
+    }
 
 
     /* Detect Image changes by looking at the feature patches between current and previous image (both at the current feature location)
@@ -954,6 +1063,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
     }
+    
+
+
     if(verbose_) std::cout << " | ";
     // Check if enough free features, enforce removal
     int requiredFreeFeature = mtState::nMax_*minTrackedAndFreeFeatures_-countTracked;
@@ -1049,8 +1161,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   initCovFeature_(0, 0) = pow(depth_uncertainty, 2);     // TODO: Find out if this should be squared or not
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   initCovFeature_(0, 0) = temp;
-                  */
+                  
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
+                  */
                 }
               } else {
                 if(doFrameVisualisation_){
