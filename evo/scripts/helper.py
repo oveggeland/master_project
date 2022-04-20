@@ -23,6 +23,13 @@ DIST = 5
 DCOV = 6 
 TRI = 7
 
+PCL_POINT_STEP = 80
+PCL_NPOINTS = 25
+PCL_LABELS = ["id","camId","rgb","cam0st", "cam1st","x","y","z","b_x","b_y","b_z","d","c_00","c_01","c_02","c_11","c_12","c_22","c_d", "tri"]
+PCL_OFFSETS = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76]
+PCL_DTYPES = ["i", "i", "I", "I", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "i"]
+PCL_DSIZE = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+
 def fit_poly(x, y, dim):
     model = np.polyfit(x, y, dim)
     p = np.poly1d(model)
