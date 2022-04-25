@@ -97,10 +97,10 @@ ImgUpdate
     maxUncertaintyToDepthRatioForDepthInitialization 0.3;		If set to 0.0 the depth is initialized with the standard value provided above, otherwise ROVIO attempts to figure out a median depth in each frame
     
     ; Here is my (Oskars) most commonly changed parameters
-    initDepth 0.05;												Initial value for the initial distance parameter
+    initDepth 0.5;												Initial value for the initial distance parameter
 
-    useCrossCameraMeasurements false;							Should cross measurements between frame be used. Might be turned of in calibration phase.
-    doStereoInitialization false;								Should a stereo match be used for feature initialization.
+    useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
+    doStereoInitialization true;								Should a stereo match be used for feature initialization.
     
     useClusterFiltering false;                                   Outlier detection by assuming that features should be on the same plane
     clusterVerbose false;                                        Verbose debugging prints
@@ -109,7 +109,7 @@ ImgUpdate
     minClusterDepth 5;                                          Minimum depth to be used in clustering 
     minClusterCount 10;                                         Minimum viable cluster nodes to use filtering method
     clusterDistanceThresh 0;                                    Distance from cluster to be accounted an outlier
-    clusterUncertaintyThresh 0.15;                              Threshold of uncertainty for a feature to be used in clustering
+    clusterUncertaintyThresh 0.3;                              Threshold of uncertainty for a feature to be used in clustering
     
     noiseGainForOffCamera 10.0;									Factor added on update noise if not main camera
     discriminativeSamplingDistance 0.02;						Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).
