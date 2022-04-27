@@ -98,11 +98,11 @@ def read_folder_data(rel_dir):
         # Create depth and traj data
     bags = glob.glob(os.path.join(rel_dir, "*.bag"))
     for bag in bags:
-        create_depth_data(bag)
-        if len(json_file) > 0:
-            create_traj_data(bag, data[bag[-8:-4]])
-        else:
-            create_traj_data(bag)
+        try:
+            create_depth_data(bag)
+        except:
+            print("mono?")
+        create_traj_data(bag)
 
 
     # Recursively continue into subfolders
