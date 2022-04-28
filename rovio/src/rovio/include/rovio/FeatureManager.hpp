@@ -144,6 +144,7 @@ class FeatureSetManager{
   const MultiCamera<nCam>* mpMultiCamera_;
 
   // Oskar
+  int centerId_[nMax];
   float depths_[nMax]; // Array of depths used for cluster outlier detection for vtol scenarios
   float stds_[nMax]; // Array of depths used for cluster outlier detection for vtol scenarios
 
@@ -195,6 +196,7 @@ class FeatureSetManager{
       // Oskar
       depths_[i] = -1;
       stds_[i] = -1;
+      centerId_[i] = -1;
     }
   }
 

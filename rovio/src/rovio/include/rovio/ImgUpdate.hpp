@@ -708,6 +708,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
             bool confirmedFeature = false;
             for (int k = 0; k < numberOfClusters_; k++){
               if (abs(centers[k]-depths[i]) - stds[i] - deviations[k] < 0){
+                filterState.fsm_.centerId_[i] = k;
                 confirmedFeature = true;
               }
             }
@@ -716,6 +717,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
               std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!" << std::endl;
               filterState.fsm_.isValid_[i] = false;
               filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              filterState.fsm_.centerId_[i] = -1;
             }
           }
         }
@@ -921,6 +923,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
               if(verbose_) std::cout << "    \033[33mRemoved feature " << filterState.fsm_.features_[i].idx_ << " with invalid distance parameter " << filterState.state_.dep(i).p_ << "!\033[0m" << std::endl;
               filterState.fsm_.isValid_[i] = false;
               filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              filterState.fsm_.centerId_[i] = -1;
             }
           }
         }
@@ -953,6 +956,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           tri_color=255;
         }
 
+        
         if((filterState.mode_ == LWF::ModeIEKF && successfulUpdate_) || (filterState.mode_ == LWF::ModeEKF && !outlierDetection.isOutlier(0))){
           if(mlpTemp1_.isMultilevelPatchInFrame(meas.aux().pyr_[camID],featureOutput_.c(),startLevel_,false)){
             f.mpStatistics_->status_[activeCamID] = TRACKED;
@@ -985,6 +989,17 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
               featureOutput_.c().drawText(drawImg_,"PE",cv::Scalar(0,0,150+(activeCamID == camID)*105));
             }
             if(verbose_) std::cout << "    \033[31mToo large pixel intesity error!\033[0m" << std::endl;
+          }
+        }
+
+        // Oskar: Add some cluster shit
+        int cid = filterState.fsm_.centerId_[ID];
+        if (useClusterFiltering_ && cid != -1){
+          if (cid == 0){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(0, 255, 255));
+          }
+          else if (cid == 1){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(255, 255, 0));
           }
         }
 
@@ -1075,6 +1090,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           if(verbose_) std::cout << filterState.fsm_.features_[i].idx_ << ", ";
           filterState.fsm_.isValid_[i] = false;
           filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+          filterState.fsm_.centerId_[i] = -1;
         }
       }
     }

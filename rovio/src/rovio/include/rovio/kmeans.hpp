@@ -20,6 +20,37 @@ int findClusterID(float* centers, float* deviations, float value, int K){
     return best_center;
 }
 
+
+void sort_centers_and_deviations(float* centers, float* deviations, int K){
+    // Sort in ascending order
+    float centers_copy[K];
+    float deviations_copy[K];
+    for (int i = 0; i < K; i++){
+        centers_copy[i] = centers[i];
+        deviations_copy[i] = deviations[i];
+    }
+    
+    sort(centers_copy, centers_copy+K);
+
+    for (int i = 0; i < K; i++){
+        bool found_match = false;
+        for (int j = 0; j < K; j++){
+            if (centers_copy[i] == centers[j]){
+                deviations[i] = deviations_copy[j];
+                found_match = true;
+            }
+        }
+
+        if (!found_match){
+            cout << "Bro something is wrong" << std::endl;
+        }
+    }
+    for (int i = 0; i < K; i++){
+        centers[i] = centers_copy[i];
+    }
+}
+
+
 void kmeans(vector<float> &A, float* centers, float* deviations, int K){
     unordered_set<int> dedup;
 
@@ -36,6 +67,7 @@ void kmeans(vector<float> &A, float* centers, float* deviations, int K){
         }
     }
     dedup.clear();
+    sort_centers_and_deviations(centers, deviations, K);
 
     int cluster[A.size()] = {-1};
     int prev_cnt[K] = {0};
@@ -76,6 +108,7 @@ void kmeans(vector<float> &A, float* centers, float* deviations, int K){
         lastErr = tot_err;
 
         if(delta < 0.1){
+            break; // Comment out this if you want to use the filtering
             bool done = true;
             for (int k = 0; k<K; k++){
                 if (cnt[k] != prev_cnt[k]){
@@ -96,9 +129,7 @@ void kmeans(vector<float> &A, float* centers, float* deviations, int K){
             centers[i] = (static_cast<float>(sum[i])/cnt[i]);
             deviations[i] = sqrt(static_cast<float>(tot_square_err[i])/cnt[i]);
         }
-
     }
 }
-
 
 #endif /* KMEANS_HPP_ */
