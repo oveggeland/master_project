@@ -1,0 +1,28 @@
+; You can partially override parameter set in this file by creating your own subset of parameter in a separate info-file and include it with:
+; #include "/home/user/workspace/rovio/cfg/rovio_custom.info"
+
+#include "/home/oveggeland/master_project/rovio/src/rovio/cfg/general.info"
+
+Camera0
+{
+  CalibrationFile  ;            Camera-Calibration file for intrinsics
+  qCM_x  0.00362760559912;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  0.707979666103;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  0.706222672277;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00108167686123;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x -0.0895574970334;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0674393631686;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.00475108671247;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+}
+Camera1
+{
+  CalibrationFile  ;            Camera-Calibration file for intrinsics
+  qCM_x  -0.00823201485508;                               X-entry of IMU to Camera quaterion (Hamilton)
+  qCM_y  -0.705171660727;                               Y-entry of IMU to Camera quaterion (Hamilton)
+  qCM_z  -0.708987807151;                               Z-entry of IMU to Camera quaterion (Hamilton)
+  qCM_w  0.00120505242117;                               W-entry of IMU to Camera quaterion (Hamilton)
+  MrMC_x 0.110820280158;                               X-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_y 0.0645620476058;                               Y-entry of IMU to Camera vector (expressed in IMU CF) [m]
+  MrMC_z -0.00571743168723;                               Z-entry of IMU to Camera vector (expressed in IMU CF) [m]
+}
+
