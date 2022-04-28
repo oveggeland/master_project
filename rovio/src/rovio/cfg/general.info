@@ -42,11 +42,11 @@ Init
         gyb_0 3e-4;			X-Covariance of initial gyroscope bias [rad^2/s^2]
         gyb_1 3e-4;			Y-Covariance of initial gyroscope bias [rad^2/s^2]
         gyb_2 3e-4;			Z-Covariance of initial gyroscope bias [rad^2/s^2]
-        vep 0.0001;			Covariance of initial linear camera-IMU extrinsics, same for all entries [m^2]
+        vep 0.000001;			Covariance of initial linear camera-IMU extrinsics, same for all entries [m^2]
         att_0 0.1;			X-Covariance of initial attitude [rad^2]
         att_1 0.1;			Y-Covariance of initial attitude [rad^2]
         att_2 0.1;			Z-Covariance of initial attitude [rad^2]
-        vea 0.01;			Covariance of initial rotational camera-IMU extrinsics, same for all entries [rad^2]
+        vea 0.0001;			Covariance of initial rotational camera-IMU extrinsics, same for all entries [rad^2]
     }
 }
 ImgUpdate
@@ -57,8 +57,6 @@ ImgUpdate
     doFrameVisualisation true;									Should the frames be visualized
     visualizePatches false;										Should the patches be visualized
     useDirectMethod true;										Should the EKF-innovation be based on direct intensity error (o.w. reprojection error)
-    startLevel 2;												Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
-    endLevel 1;													Lowest patch level which is being employed
     nDetectionBuckets 100;										Number of discretization buckets used during the candidates selection
     MahalanobisTh 9.21;											Mahalanobis treshold for the update, 5.8858356
     UpdateNoise
@@ -97,10 +95,12 @@ ImgUpdate
     maxUncertaintyToDepthRatioForDepthInitialization 0.3;		If set to 0.0 the depth is initialized with the standard value provided above, otherwise ROVIO attempts to figure out a median depth in each frame
     
     ; Here is my (Oskars) most commonly changed parameters
-    initDepth 0.05;												Initial value for the initial distance parameter
+    startLevel 2;												Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
+    endLevel 1;													Lowest patch level which is being employed
+    initDepth 0.5;												Initial value for the initial distance parameter
 
     useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
-    doStereoInitialization false;								Should a stereo match be used for feature initialization.
+    doStereoInitialization true;								Should a stereo match be used for feature initialization.
     
     useClusterFiltering false;                                   Outlier detection by assuming that features should be on the same plane
     numberOfClusters 1;                                         Number of clusters assumed to exist
