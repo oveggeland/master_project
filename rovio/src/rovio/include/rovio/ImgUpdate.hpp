@@ -693,31 +693,34 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       // Run kmeans to create clusters
       float centers[numberOfClusters_] = {-1};
       float deviations[numberOfClusters_] = {-1};
+      int n_clusters = numberOfClusters_;
       if (cluster_points.size() > minClusterCount_){
         kmeans(cluster_points, centers, deviations, numberOfClusters_);
-
-        for (int i = 0; i<numberOfClusters_; i++){
+        std::cout << "Number of clusters is " << n_clusters << std::endl;
+        for (int i = 0; i<n_clusters; i++){
           std::cout << "Center " << i << ": " << centers[i] << std::endl;
           std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
         }
 
-        // Iterate over features to see if the match a cluster or not
-        for (int i = 0; i < mtState::nMax_; i++){
-        // Is the feature valid and sufficiently certain?
-          if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
-            bool confirmedFeature = false;
-            for (int k = 0; k < numberOfClusters_; k++){
-              if (abs(centers[k]-depths[i]) - stds[i] - deviations[k] < 0){
-                filterState.fsm_.centerId_[i] = k;
-                confirmedFeature = true;
+        if (n_clusters > 0){
+          // Iterate over features to see if the match a cluster or not
+          for (int i = 0; i < mtState::nMax_; i++){
+          // Is the feature valid and sufficiently certain?
+            if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
+              bool confirmedFeature = false;
+              for (int k = 0; k < numberOfClusters_; k++){
+                if (abs(centers[k]-depths[i]) - stds[i] - deviations[k] < 0){
+                  filterState.fsm_.centerId_[i] = k;
+                  confirmedFeature = true;
+                }
               }
-            }
 
-            if (!confirmedFeature){
-              std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!" << std::endl;
-              filterState.fsm_.isValid_[i] = false;
-              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
-              filterState.fsm_.centerId_[i] = -1;
+              if (!confirmedFeature){
+                std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!" << std::endl;
+                filterState.fsm_.isValid_[i] = false;
+                filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+                filterState.fsm_.centerId_[i] = -1;
+              }
             }
           }
         }
@@ -1000,6 +1003,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           }
           else if (cid == 1){
             mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(255, 255, 0));
+          }
+          else if (cid > 1){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(255, 0, 255));
           }
         }
 
