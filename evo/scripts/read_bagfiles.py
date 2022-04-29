@@ -7,7 +7,7 @@ import json
 import struct
 import numpy as np
 
-from scripts.helper import *
+from helper import *
 import rosbag
 
 
@@ -119,7 +119,7 @@ def read_folder_data(rel_dir):
     print("---------", rel_dir, "---------")
     # Create folders they don't exist
     try_create_path(os.path.join(EVO_PATH, "data", "depths", rel_dir))
-    try_create_path(os.path.join(EVO_PATH, "data", "pcl", rel_dir))
+    #try_create_path(os.path.join(EVO_PATH, "data", "pcl", rel_dir))
     try_create_path(os.path.join(EVO_PATH, "data", "trajs", rel_dir))
     try_create_path(os.path.join(EVO_PATH, "data", "tf", rel_dir))
 

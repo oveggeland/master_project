@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from scripts.helper import *
+from helper import *
 
 
 def bin_data_by_distance(data):

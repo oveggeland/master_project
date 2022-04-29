@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from scripts.helper import *
+from helper import *
 
 
 def calculate_traj_length(data):
