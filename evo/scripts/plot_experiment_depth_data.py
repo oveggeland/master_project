@@ -17,6 +17,56 @@ def bin_data_by_distance(data):
     data[:, DIST] = x_binned
     return data, x_binned.max()+1
 
+
+def plot_depth_trajectory(data, plot_path=None):
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+
+        plt.figure(f"Estimated depths for baseline {bl}")
+
+        bl_data = data[bl]
+        for run in bl_data:
+            # for each run, plot the trajectory of average depth estimates
+            n_frames = int(run[:, FRAMEID].max()+1)
+            print(n_frames)
+            depths = np.zeros(n_frames)
+            for i in range(n_frames):
+                frame_data = run[run[:, FRAMEID] == i]
+                depths[i] = np.average(frame_data[:, DIST])
+
+            plt.plot(np.arange(n_frames), depths)
+            plt.yscale('log')
+    plt.show()
+
+
+
+def average_initial_distance_per_baseline(data, plot_path=None):
+    plt.figure("Average initial distance per baseline")
+
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+
+        bl_data = data[bl]
+        print(np.shape(bl_data[0]))
+        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
+        # first_frame_dephts = [run[:, [DIST, TRI]] for run in first_frames]
+        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+        non_tri_points = [run[run[:, TRI] != 1] for run in first_frames]
+
+        for i in range(len(bl_data)):
+            if len(tri_points[i]):
+                plt.scatter([bl for point in tri_points[i]], tri_points[i][:, DIST], c='r')
+            plt.scatter([bl for point in non_tri_points[i]], non_tri_points[i][:, DIST], c='b')
+
+        #avg_depths = [np.average(run) for run in first_frame_dephts[:, DIST]]
+        #plt.scatter([bl for run in bl_data], avg_depths)
+
+    plt.yscale("log")
+    plt.show()
+
+
 def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True, errorbar=False):
     plt.figure("Average std per distance")
 
@@ -98,4 +148,6 @@ if __name__ == "__main__":
         all_data[bl] = bl_data
     
     # Different plot functions to visualize the data
-    average_uncertainty_per_distance(all_data, plot_path)
+    plot_depth_trajectory(all_data, plot_path=None)
+    average_initial_distance_per_baseline(all_data, plot_path=None)
+    #average_uncertainty_per_distance(all_data, plot_path)
