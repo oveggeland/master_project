@@ -49,7 +49,7 @@ def yaw_errors_per_distance_traveled(data, plot_path, abs_errors=True):
         plt.errorbar(BASELINES[bl], avg_yaw_per_dist, std_yaw_per_dist, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_yaw_per_dist, marker='_', c='r')
 
-    plt.xlabel("Baseline")
+    plt.xlabel("Baseline[cm]")
     plt.ylabel("Yaw error per distance [deg/m]")
     plt.tight_layout()
     if plot_path:
@@ -77,7 +77,7 @@ def pos_errors_per_distance_traveled(data, plot_path):
         plt.errorbar(BASELINES[bl], avg_pos_per_dist*100, std_pos_per_dist*100, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_pos_per_dist*100, marker='_', c='r')
 
-    plt.xlabel("Baseline")
+    plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position per distance traveled [%]")
     plt.tight_layout()
     if plot_path:
@@ -105,7 +105,7 @@ def pos_errors(data, plot_path):
         plt.errorbar(BASELINES[bl], avg_pos_error, std_pos_error, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_pos_error, marker='_', c='r')
 
-    plt.xlabel("Baseline")
+    plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position error [m]")
     plt.tight_layout()
     if plot_path:
@@ -136,7 +136,7 @@ def height_errors(data, plot_path, gt=10):
 
     plt.plot([12.5, 25], [float(gt), float(gt)], linestyle='dashed')
 
-    plt.xlabel("Baseline")
+    plt.xlabel("Baseline[cm]")
     plt.ylabel("Y translation[m]")
     plt.tight_layout()
     if plot_path:

@@ -233,11 +233,17 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
   // Oskar
   bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
+  bool clusterVerbose_;
   int numberOfClusters_;
   int depthDirection_;
+  int minClusterCount_;
   double minClusterDepth_;
-  double minClusterCount_;
+  double clusterUncertaintyThresh_;
   double clusterDistanceThresh_;
+
+  mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
+  mutable rovio::LandmarkOutput landmarkOutput_;
+  mutable MXD landmarkOutputCov_;
 
   // Temporary
   mutable PixelOutputCT pixelOutputCT_;
@@ -247,11 +253,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable FeatureOutput featureOutput_;
   mutable MXD featureOutputCov_;
   mutable MXD featureOutputJac_;
-  // Oskar 
-  mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
-  mutable rovio::LandmarkOutput landmarkOutput_;
-  mutable MXD landmarkOutputCov_;
-  float cluster_center;
 
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp1_;
   mutable MultilevelPatch<mtState::nLevels_,mtState::patchSize_> mlpTemp2_;
@@ -383,11 +384,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("alignmentGradientExponent",alignmentGradientExponent_);
     //Oskar
     boolRegister_.registerScalar("useClusterFiltering",useClusterFiltering_);
+    boolRegister_.registerScalar("clusterVerbose",clusterVerbose_);
     intRegister_.registerScalar("numberOfClusters", numberOfClusters_);
     intRegister_.registerScalar("depthDirection", depthDirection_);
+    intRegister_.registerScalar("minClusterCount", minClusterCount_);
     doubleRegister_.registerScalar("minClusterDepth", minClusterDepth_);
-    doubleRegister_.registerScalar("minClusterCount", minClusterCount_);
     doubleRegister_.registerScalar("clusterDistanceThresh", clusterDistanceThresh_);
+    doubleRegister_.registerScalar("clusterUncertaintyThresh", clusterUncertaintyThresh_);
   };
 
   /** \brief Destructor
@@ -628,79 +631,96 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     filterState.state_.aux().activeCameraCounter_ = 0;
 
 
-    // Oskar removes bad features based on an awesome clustering algorithm!
+    /* Oskar removes bad features based on an awesome clustering algorithm!
+    
+    1. Take all points that is sufficiently converged in depth direction (std/depth < thresh)
+    2. Cluster these points into K groups and find their centers
+    3. For each point with sufficient convergence in depth direction (std/depth < thresh):
+          - Check if sufficiently close to each of K centers
+          - If not, discard feature
+    */
     if (useClusterFiltering_){
-      // Variables for storing of landmark positions and covariance
-      Eigen::Vector3f MrMP;
-      MXD& cov = filterState.cov_;
-      Eigen::Matrix3f cov_MrMP;
+      // Update dephts and stds in filterState!
+      V3D WrWM = filterState.state_.WrWM();
+      QPD qWM = filterState.state_.qWM();
+      MXD cov = filterState.cov_;
+      for (int i = 0; i < mtState::nMax_; i++){
+        // Update landmark outputs to the relevant feature
+        landmarkOutputImuCT_.setFeatureID(i);
+        landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
+        landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
 
-      float* depths= filterState.fsm_.depths_;
-      std::vector<float> valid_depths = {};
+        // Get the depth of the feature
+        Eigen::Vector3f MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+        V3D WrWP = WrWM + qWM.rotate(V3D(MrMP[0], MrMP[1], MrMP[2]));
 
-      for (int i = 0; i <  mtState::nMax_; i++){
-        if (depths[i] > minClusterDepth_){
-          valid_depths.push_back(depths[i]);
+        filterState.fsm_.depths_[i] = WrWP[depthDirection_];
+
+        // Get the depth uncertainty of the feature
+        M3D cov_MrMP = landmarkOutputCov_.cast<double>();
+        
+        V3D unit_depth_vector(0,0,0);
+        unit_depth_vector[depthDirection_] = 1;
+        V3D robocentric_depth_vector = qWM.inverseRotate(unit_depth_vector);
+        V3D cov_depth_direction = cov_MrMP*robocentric_depth_vector;
+
+        float depth_std = sqrt(cov_depth_direction.norm());
+        filterState.fsm_.stds_[i] = depth_std;
+
+        if (clusterVerbose_){
+          std::cout << "Robocentric landmark position is " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
+          std::cout << "World centered landmark position is " << WrWP[0] << ", " << WrWP[1] << ", " << WrWP[2] << std::endl;
+          std::cout << "Robocentric covariance of landmark is" << std::endl << cov_MrMP << std::endl;
+          std::cout << "Robocentric depth vector is " << robocentric_depth_vector[0] << ", " << robocentric_depth_vector[1] << ", " << robocentric_depth_vector[2] << std::endl;
+          std::cout << "Covariance in depth direction is " << cov_depth_direction[0] << ", " << cov_depth_direction[1] << ", " << cov_depth_direction[2] << std::endl;
+          std::cout << "Depth std is " << depth_std << std::endl << std::endl;
         }
       }
+      
+      // Get point depths and standard deviations 
+      float* depths = filterState.fsm_.depths_;
+      float* stds = filterState.fsm_.stds_;
 
+      // Check if points are valid for clustering
+      std::vector<float> cluster_points = {};
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (filterState.fsm_.isValid_[i] && depths[i] > minClusterDepth_ && stds[i]/depths[i] < clusterUncertaintyThresh_){
+          cluster_points.push_back(depths[i]);
+        }
+      }
+      
+
+      // Run kmeans to create clusters
       float centers[numberOfClusters_] = {-1};
       float deviations[numberOfClusters_] = {-1};
-      if (valid_depths.size() > minClusterCount_){
-        kmeans(valid_depths, centers, deviations, numberOfClusters_);
-
-        for (int i = 0; i<numberOfClusters_; i++){
+      int n_clusters = numberOfClusters_;
+      if (cluster_points.size() > minClusterCount_){
+        kmeans(cluster_points, centers, deviations, numberOfClusters_);
+        std::cout << "Number of clusters is " << n_clusters << std::endl;
+        for (int i = 0; i<n_clusters; i++){
           std::cout << "Center " << i << ": " << centers[i] << std::endl;
           std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
         }
-      }
 
-
-      V3D wP;
-      V3D wP_cov;
-      V3D wP_std;
-      float depth;
-      float depth_std;
-      for (int i = 0; i <  mtState::nMax_; i++){
-        if (filterState.fsm_.isValid_[i]){
-          landmarkOutputImuCT_.setFeatureID(i);
-          landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
-          landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
-          
-          MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
-          cov_MrMP = landmarkOutputCov_.cast<float>();
-
-          wP = filterState.state_.qWM().rotate(V3D(MrMP[0], MrMP[1], MrMP[2])) + filterState.state_.WrWM();
-          wP_cov = filterState.state_.qWM().rotate(V3D(cov_MrMP(0, 0), cov_MrMP(1, 1), cov_MrMP(2, 2)));
-          wP_std = V3D(sqrt(wP_cov[0]), sqrt(wP_cov[1]), sqrt(wP_cov[2]));
-
-          depth = wP[depthDirection_];
-          depth_std = wP_std[depthDirection_];
-          filterState.fsm_.depths_[i] = depth;
-
-          /*
-          std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << std::endl;
-          std::cout << "Landmark robocentric position " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
-          std::cout << "Landmark robocentric covariance " << cov_MrMP(0,0) << ", " << cov_MrMP(1,1) << ", " << cov_MrMP(2,2) << std::endl;
-          std::cout << "Robot position in world frame " << filterState.state_.WrWM()[0] << ", " << filterState.state_.WrWM()[1] << ", " << filterState.state_.WrWM()[2] << std::endl;
-          std::cout << "Landmark position in world frame " << wP[0] << ", " << wP[1] << ", " << wP[2] << std::endl;
-          std::cout << "Landmark std in world frame " << wP_std[0] << ", " << wP_std[1] << ", " << wP_std[2] << std::endl << std::endl;
-          */
-
-          if (centers[0] != -1){
-
-            // See if the point is part of any cluster
-            bool confirmed = false;
-            for (int k=0; k<numberOfClusters_; k++){
-              if ((abs(depth-centers[k]) - depth_std < deviations[k])){  // Check if the 1-sigma 
-                confirmed = true;
+        if (n_clusters > 0){
+          // Iterate over features to see if the match a cluster or not
+          for (int i = 0; i < mtState::nMax_; i++){
+          // Is the feature valid and sufficiently certain?
+            if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
+              bool confirmedFeature = false;
+              for (int k = 0; k < numberOfClusters_; k++){
+                if (abs(centers[k]-depths[i]) - stds[i] - deviations[k] < 0){
+                  filterState.fsm_.centerId_[i] = k;
+                  confirmedFeature = true;
+                }
               }
-            }
 
-            if (!confirmed){
-              std::cout << "invalid point at " << depth << " with std " << depth_std << std::endl;
-              filterState.fsm_.isValid_[i] = false;
-              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              if (!confirmedFeature){
+                std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!" << std::endl;
+                filterState.fsm_.isValid_[i] = false;
+                filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+                filterState.fsm_.centerId_[i] = -1;
+              }
             }
           }
         }
@@ -906,6 +926,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
               if(verbose_) std::cout << "    \033[33mRemoved feature " << filterState.fsm_.features_[i].idx_ << " with invalid distance parameter " << filterState.state_.dep(i).p_ << "!\033[0m" << std::endl;
               filterState.fsm_.isValid_[i] = false;
               filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              filterState.fsm_.centerId_[i] = -1;
             }
           }
         }
@@ -938,6 +959,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           tri_color=255;
         }
 
+        
         if((filterState.mode_ == LWF::ModeIEKF && successfulUpdate_) || (filterState.mode_ == LWF::ModeEKF && !outlierDetection.isOutlier(0))){
           if(mlpTemp1_.isMultilevelPatchInFrame(meas.aux().pyr_[camID],featureOutput_.c(),startLevel_,false)){
             f.mpStatistics_->status_[activeCamID] = TRACKED;
@@ -970,6 +992,20 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
               featureOutput_.c().drawText(drawImg_,"PE",cv::Scalar(0,0,150+(activeCamID == camID)*105));
             }
             if(verbose_) std::cout << "    \033[31mToo large pixel intesity error!\033[0m" << std::endl;
+          }
+        }
+
+        // Oskar: Add some cluster shit
+        int cid = filterState.fsm_.centerId_[ID];
+        if (useClusterFiltering_ && cid != -1){
+          if (cid == 0){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(0, 255, 255));
+          }
+          else if (cid == 1){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(255, 255, 0));
+          }
+          else if (cid > 1){
+            mlpTemp1_.drawMultilevelPatchBorder(drawImg_,featureOutput_.c(),1.0,cv::Scalar(255, 0, 255));
           }
         }
 
@@ -1060,6 +1096,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           if(verbose_) std::cout << filterState.fsm_.features_[i].idx_ << ", ";
           filterState.fsm_.isValid_[i] = false;
           filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+          filterState.fsm_.centerId_[i] = -1;
         }
       }
     }
@@ -1181,6 +1218,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
     }
+
     for(unsigned int i=0;i<mtState::nMax_;i++){
       if(filterState.fsm_.isValid_[i]){
         filterState.fsm_.features_[i].log_previous_ = *filterState.fsm_.features_[i].mpCoordinates_;

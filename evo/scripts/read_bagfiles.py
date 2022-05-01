@@ -1,11 +1,15 @@
 # Script to read all rovio data at once!
+from operator import indexOf
 import sys
 import os
 import glob
 import json
 import struct
-import rosbag
+import numpy as np
+
 from helper import *
+import rosbag
+
 
 def create_depth_data(bagpath):
     target_file = os.path.join(EVO_PATH, "data", "depths", bagpath[:-4]+".txt")
@@ -35,6 +39,36 @@ def create_depth_data(bagpath):
             point_line = [frame_id, point_id, cam_id, cam0_st, cam1_st, d, d_cov, tri]
             target_string = " ".join([str(element) for element in point_line])
             f.write(target_string+"\n")
+        
+        frame_id += 1
+
+def create_pcl_data(bagpath):
+    target_file = os.path.join(EVO_PATH, "data", "pcl", bagpath[:-4]+".txt")
+    f = open(target_file, "w")
+    f.truncate(0) # Remove old data
+
+    bag = rosbag.Bag(bagpath)
+    header = "frame_id " + " ".join(PCL_LABELS) + " init\n"
+    f.write(header)
+
+    frame_id = 0
+    id_counter = -1
+    line = np.zeros((len(PCL_LABELS)+2))
+    for _, msg, _ in bag.read_messages(topics=["/rovio/pcl"]):
+        data = msg.data
+        line[0] = frame_id
+        for point in range(PCL_NPOINTS):
+            for i, param in enumerate(PCL_LABELS):
+                line[i+1] = struct.unpack(PCL_DTYPES[i], bytes(data[point*PCL_POINT_STEP + PCL_OFFSETS[i]:point*PCL_POINT_STEP+PCL_OFFSETS[i]+PCL_DSIZE[i]]))[0]
+        
+            id = line[indexOf(PCL_LABELS, 'id')+1]
+            if id > id_counter:
+                line[-1] = 1
+                id_counter = id
+            else:
+                line[-1] = 0
+
+            f.write(" ".join(line.astype(str)) + "\n")
         
         frame_id += 1
 
@@ -85,6 +119,7 @@ def read_folder_data(rel_dir):
     print("---------", rel_dir, "---------")
     # Create folders they don't exist
     try_create_path(os.path.join(EVO_PATH, "data", "depths", rel_dir))
+    #try_create_path(os.path.join(EVO_PATH, "data", "pcl", rel_dir))
     try_create_path(os.path.join(EVO_PATH, "data", "trajs", rel_dir))
     try_create_path(os.path.join(EVO_PATH, "data", "tf", rel_dir))
 
@@ -98,11 +133,11 @@ def read_folder_data(rel_dir):
         # Create depth and traj data
     bags = glob.glob(os.path.join(rel_dir, "*.bag"))
     for bag in bags:
-        create_depth_data(bag)
-        if len(json_file) > 0:
-            create_traj_data(bag, data[bag[-8:-4]])
-        else:
-            create_traj_data(bag)
+        try:
+            create_depth_data(bag)
+        except:
+            print("mono?")
+        create_traj_data(bag)
 
 
     # Recursively continue into subfolders
