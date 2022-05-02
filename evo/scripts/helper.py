@@ -2,6 +2,8 @@ import os
 import math
 import numpy as np
 from numpy import rad2deg
+from scipy.spatial.transform import Rotation as R
+
 
 EVO_PATH = "/home/oveggeland/master_project/evo"
 
@@ -22,6 +24,9 @@ CAM1ST = 4
 DIST = 5 
 DCOV = 6 
 TRI = 7
+X = 8
+Y = 9
+Z = 10
 
 PCL_POINT_STEP = 80
 PCL_NPOINTS = 25
@@ -59,3 +64,16 @@ def quat_to_euler(quat, deg=True):
         return rad2deg(roll_x), rad2deg(pitch_y), rad2deg(yaw_z) # in degrees
     else:
         return roll_x, pitch_y, yaw_z # in radians
+
+def rotate_vector(vec, quat):
+    r = R.from_quat(quat)
+    rot_vec = r.apply(vec)
+    return rot_vec
+
+if __name__ == "__main__":
+    print("Testing stuff")
+
+    vec = [1, 0, 0]
+    quat = [0.7, 0.7, 0, 0]
+
+    print(rotate_vector(vec, quat))

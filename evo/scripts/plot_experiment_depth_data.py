@@ -6,6 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scripts.helper import rotate_vector
 
 from helper import *
 
@@ -29,7 +30,6 @@ def plot_depth_trajectory(data, plot_path=None):
         for run in bl_data:
             # for each run, plot the trajectory of average depth estimates
             n_frames = int(run[:, FRAMEID].max()+1)
-            print(n_frames)
             depths = np.zeros(n_frames)
             for i in range(n_frames):
                 frame_data = run[run[:, FRAMEID] == i]
@@ -39,7 +39,40 @@ def plot_depth_trajectory(data, plot_path=None):
             #plt.yscale('log')
 
 
-def initial_distance_per_baseline(data, frame_count=10, plot_path=None):
+def initial_distance_per_baseline(data, trajs, frame_count=10, plot_path=None):
+    plt.figure(f"Initial depths for the first {frame_count} frames")
+
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+
+        bl_trajs = trajs[bl]
+        bl_data = data[bl]
+        first_frames = [run[run[:, FRAMEID] <= frame_count] for run in bl_data]
+        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+
+        points = [np.unique(run[:, POINTID]) for run in tri_points]
+
+        for run_idx in range(len(points)):
+            run_traj = bl_trajs[run_idx]
+            run_data = tri_points[run_idx]
+            for point_idx in points[run_idx]:
+                point_data = run_data[run_data[:, POINTID] == point_idx]
+                vector = point_data[0, [X, Y, Z]]
+                
+                # Find pose and rotate vector
+                frame_id = int(point_data[0, FRAMEID])
+                x, y, z, qx, qy, qz, qw  = run_traj[frame_id, 1:]
+                world_frame_vector = rotate_vector(vector, [qx, qy, qz, qw])
+
+                distance = world_frame_vector[0] + x
+                plt.scatter(bl, distance, c='r')
+                
+    if plot_path:
+        plt.savefig(os.path.join(plot_path, f"initial_distances_{frame_count}_frames.png"))
+
+
+def initial_depth_per_baseline(data, frame_count=10, plot_path=None):
     plt.figure(f"Initial depths for the first {frame_count} frames")
 
     for bl in BASELINES.keys():
@@ -55,7 +88,6 @@ def initial_distance_per_baseline(data, frame_count=10, plot_path=None):
         for run_idx in range(len(points)):
             run_data = tri_points[run_idx]
             for point_idx in points[run_idx]:
-
                 point_data = run_data[run_data[:, POINTID] == point_idx]
                 initial_depth = point_data[0, DIST]
 
@@ -122,6 +154,7 @@ if __name__ == "__main__":
         print("please provide an experiment folder")
         exit()
 
+    traj_path = os.path.join(EVO_PATH, "data", "trajs", exp)
     data_path = os.path.join(EVO_PATH, "data", "depths", exp)
     plot_path = os.path.join(EVO_PATH, "plots", exp)
     try_create_path(plot_path)
@@ -129,25 +162,34 @@ if __name__ == "__main__":
 
     # Extract data from data folder
     baselines = [name for name in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, name)) and name in BASELINES.keys()]
-    all_data = {
+    depth_data = {
         bl:[] for bl in baselines
     }
-    print(all_data)
+    traj_data = {
+        bl:[] for bl in baselines
+    }
 
     for bl in baselines:
-        bl_path = os.path.join(data_path, bl)
-        bl_data = []
+        bl_depth_path = os.path.join(data_path, bl)
+        bl_depth_data = []
+        bl_traj_path = os.path.join(traj_path, bl)
+        bl_traj_data = []
 
-        runs = [name for name in os.listdir(bl_path) if os.path.isfile(os.path.join(bl_path, name))]
+        runs = [name for name in os.listdir(bl_depth_path) if os.path.isfile(os.path.join(bl_depth_path, name))]
         for run in runs:
-            run_data = pd.read_csv(os.path.join(bl_path, run), sep=" ").to_numpy()
-            bl_data.append(run_data[run_data[:, POINTID] != -1])
+            run_data = pd.read_csv(os.path.join(bl_depth_path, run), sep=" ").to_numpy()
+            bl_depth_data.append(run_data[run_data[:, POINTID] != -1])
+        depth_data[bl] = bl_depth_data
 
-        all_data[bl] = bl_data
+        runs = [name for name in os.listdir(bl_traj_path) if os.path.isfile(os.path.join(bl_traj_path, name))]
+        for run in runs:
+            run_data = pd.read_csv(os.path.join(bl_traj_path, run), sep=" ").to_numpy()
+            bl_traj_data.append(run_data)
+        traj_data[bl] = bl_traj_data
     
     # Different plot functions to visualize the data
-    #plot_depth_trajectory(all_data, plot_path=None)
-    #initial_distance_per_baseline(all_data, plot_path=None)
-    initial_distance_per_baseline(all_data, 10, plot_path)
+    #plot_depth_trajectory(depth_data, plot_path=None)
+    #initial_distance_per_baseline(depth_data, plot_path=None)
+    initial_distance_per_baseline(depth_data, traj_data, 2, plot_path)
     plt.show()
-    #average_uncertainty_per_distance(all_data, plot_path)
+    #average_uncertainty_per_distance(depth_data, plot_path)
