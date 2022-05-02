@@ -1225,6 +1225,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   */
                 }
+                else{
+                  f.isTriangulated = false;
+                }
               } else {
                 if(doFrameVisualisation_){
                   alignedCoordinates_.drawPoint(filterState.img_[otherCam], cv::Scalar(0,0,150));

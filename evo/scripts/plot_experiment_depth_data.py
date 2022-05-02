@@ -36,32 +36,33 @@ def plot_depth_trajectory(data, plot_path=None):
                 depths[i] = np.average(frame_data[:, DIST])
 
             plt.plot(np.arange(n_frames), depths)
-            plt.yscale('log')
+            #plt.yscale('log')
 
 
-def initial_distance_per_baseline(data, plot_path=None):
-    plt.figure("Initial distance per baseline")
+def initial_distance_per_baseline(data, frame_count=10, plot_path=None):
+    plt.figure(f"Initial depths for the first {frame_count} frames")
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
 
         bl_data = data[bl]
-        print(np.shape(bl_data[0]))
-        first_frames = [run[run[:, FRAMEID] == 10] for run in bl_data]
-        # first_frame_dephts = [run[:, [DIST, TRI]] for run in first_frames]
+        first_frames = [run[run[:, FRAMEID] <= frame_count] for run in bl_data]
         tri_points = [run[run[:, TRI] == 1] for run in first_frames]
-        non_tri_points = [run[run[:, TRI] != 1] for run in first_frames]
 
-        for i in range(len(bl_data)):
-            if len(tri_points[i]):
-                plt.scatter([bl for point in tri_points[i]], tri_points[i][:, DIST], c='r')
-            plt.scatter([bl for point in non_tri_points[i]], non_tri_points[i][:, DIST], c='b')
+        points = [np.unique(run[:, POINTID]) for run in tri_points]
 
-        #avg_depths = [np.average(run) for run in first_frame_dephts[:, DIST]]
-        #plt.scatter([bl for run in bl_data], avg_depths)
+        for run_idx in range(len(points)):
+            run_data = tri_points[run_idx]
+            for point_idx in points[run_idx]:
 
-    #plt.yscale("log")
+                point_data = run_data[run_data[:, POINTID] == point_idx]
+                initial_depth = point_data[0, DIST]
+
+                plt.scatter(bl, initial_depth, c='r')
+                
+    if plot_path:
+        plt.savefig(os.path.join(plot_path, f"initial_depths_{frame_count}_frames.png"))
 
 
 def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True, errorbar=False):
@@ -145,7 +146,8 @@ if __name__ == "__main__":
         all_data[bl] = bl_data
     
     # Different plot functions to visualize the data
-    plot_depth_trajectory(all_data, plot_path=None)
-    initial_distance_per_baseline(all_data, plot_path=None)
+    #plot_depth_trajectory(all_data, plot_path=None)
+    #initial_distance_per_baseline(all_data, plot_path=None)
+    initial_distance_per_baseline(all_data, 10, plot_path)
     plt.show()
     #average_uncertainty_per_distance(all_data, plot_path)
