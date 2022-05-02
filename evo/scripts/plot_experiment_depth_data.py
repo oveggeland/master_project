@@ -19,6 +19,42 @@ def bin_data_by_distance(data):
     return data, x_binned.max()+1
 
 
+def plot_distance_trajectory(data, trajs, plot_path=None):
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+
+        plt.figure(f"Estimated distances for baseline {bl}")
+
+        bl_traj_data = trajs[bl]
+        bl_data = data[bl]
+        for i in range(len(bl_data)):
+            run = bl_data[i]
+            traj = bl_traj_data[i]
+            # for each run, plot the trajectory of average depth estimates
+            n_frames = int(run[:, FRAMEID].max())
+            distances = np.zeros(n_frames)
+            for i in range(n_frames):
+                frame_data = run[run[:, FRAMEID] == i]
+
+                n_points = frame_data.shape[0]
+                frame_dists = np.zeros(n_points)
+                for j in range(n_points):
+                    vector = frame_data[j, [X, Y, Z]]
+                    
+                    x, y, z, qx, qy, qz, qw  = traj[i, 1:]
+                    world_frame_vector = rotate_vector(vector, [qx, qy, qz, qw])
+
+                    distance = world_frame_vector[0] + x
+                    frame_dists[j] = distance
+
+                distances[i] = np.average(frame_dists)
+
+            plt.plot(np.arange(n_frames), distances)
+            #plt.yscale('log')
+        if plot_path:
+            plt.savefig(os.path.join(plot_path, bl, "distance_trajectory.png"))
+
 def plot_depth_trajectory(data, plot_path=None):
     for bl in BASELINES.keys():
         if bl not in data.keys():
@@ -38,10 +74,12 @@ def plot_depth_trajectory(data, plot_path=None):
             plt.plot(np.arange(n_frames), depths)
             #plt.yscale('log')
 
+        if plot_path:
+            plt.savefig(os.path.join(plot_path, bl, "depth_trajectory.png"))
 
-def initial_distance_per_baseline(data, trajs, frame_count=10, plot_path=None):
-    plt.figure(f"Initial depths for the first {frame_count} frames")
-
+def initial_distance_per_baseline(data, trajs, frame_count=10, gt=20, plot_path=None):
+    plt.figure(f"Initial distance for the first {frame_count} frames")
+    plt.axhline(gt, linestyle='dashed')
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
@@ -109,7 +147,7 @@ def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True,
         if only_tri_points:
             data_stack = data_stack[data_stack[:, TRI] == 1]
         data_stack = data_stack[(data_stack[:, CAM0ST] == 4) | (data_stack[:, CAM1ST] == 4)]
-        data_stack = data_stack[(data_stack[:, DIST] < 30) & (data_stack[:, DCOV] > 0) & (data_stack[:, DCOV] < 100)]
+        data_stack = data_stack[(data_stack[:, DIST] < 100) & (data_stack[:, DCOV] > 0) & (data_stack[:, DCOV] < 100)]
 
         # Bin on integer distances
         data_binned, n_bins = bin_data_by_distance(data_stack)
@@ -188,8 +226,8 @@ if __name__ == "__main__":
         traj_data[bl] = bl_traj_data
     
     # Different plot functions to visualize the data
-    #plot_depth_trajectory(depth_data, plot_path=None)
-    #initial_distance_per_baseline(depth_data, plot_path=None)
-    initial_distance_per_baseline(depth_data, traj_data, 2, plot_path)
-    plt.show()
-    #average_uncertainty_per_distance(depth_data, plot_path)
+    plot_depth_trajectory(depth_data, plot_path)
+    plot_distance_trajectory(depth_data, traj_data, plot_path)
+    initial_depth_per_baseline(depth_data, 1, plot_path)
+    initial_distance_per_baseline(depth_data, traj_data, 1, 25, plot_path)
+    average_uncertainty_per_distance(depth_data, plot_path)

@@ -20,8 +20,8 @@ def calculate_traj_length(data):
 
 def get_final_yaw_value(run, deg=True):
     quat = run[-1, 4:]
-    _, _, yaw = quat_to_euler(quat, deg=deg)
-    return yaw
+    roll, pitch, yaw = quat_to_euler(quat, deg=deg)
+    return pitch
 
 
 def yaw_errors_per_distance_traveled(data, plot_path, abs_errors=True):
@@ -120,7 +120,7 @@ def height_errors(data, plot_path, gt=10):
 
         # Get traj lengths and final yaw values
         bl_data = data[bl]
-        y_trajs = [run[:, 2] for run in bl_data]
+        y_trajs = [run[:, 1] for run in bl_data]
 
 
         y_length = [max(traj) for traj in y_trajs]
