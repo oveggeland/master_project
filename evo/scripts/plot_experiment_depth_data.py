@@ -37,12 +37,10 @@ def plot_depth_trajectory(data, plot_path=None):
 
             plt.plot(np.arange(n_frames), depths)
             plt.yscale('log')
-    plt.show()
 
 
-
-def average_initial_distance_per_baseline(data, plot_path=None):
-    plt.figure("Average initial distance per baseline")
+def initial_distance_per_baseline(data, plot_path=None):
+    plt.figure("Initial distance per baseline")
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
@@ -50,7 +48,7 @@ def average_initial_distance_per_baseline(data, plot_path=None):
 
         bl_data = data[bl]
         print(np.shape(bl_data[0]))
-        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
+        first_frames = [run[run[:, FRAMEID] == 10] for run in bl_data]
         # first_frame_dephts = [run[:, [DIST, TRI]] for run in first_frames]
         tri_points = [run[run[:, TRI] == 1] for run in first_frames]
         non_tri_points = [run[run[:, TRI] != 1] for run in first_frames]
@@ -63,8 +61,7 @@ def average_initial_distance_per_baseline(data, plot_path=None):
         #avg_depths = [np.average(run) for run in first_frame_dephts[:, DIST]]
         #plt.scatter([bl for run in bl_data], avg_depths)
 
-    plt.yscale("log")
-    plt.show()
+    #plt.yscale("log")
 
 
 def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True, errorbar=False):
@@ -121,7 +118,7 @@ if __name__ == "__main__":
     try:
         exp = sys.argv[1]
     except:
-        print("please provide an experiemnt folder")
+        print("please provide an experiment folder")
         exit()
 
     data_path = os.path.join(EVO_PATH, "data", "depths", exp)
@@ -149,5 +146,6 @@ if __name__ == "__main__":
     
     # Different plot functions to visualize the data
     plot_depth_trajectory(all_data, plot_path=None)
-    average_initial_distance_per_baseline(all_data, plot_path=None)
+    initial_distance_per_baseline(all_data, plot_path=None)
+    plt.show()
     #average_uncertainty_per_distance(all_data, plot_path)
