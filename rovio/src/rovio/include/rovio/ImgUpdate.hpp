@@ -231,7 +231,11 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double alignmentGradientExponent_; /**<Exponent used for gradient based weighting of residuals.*/
   double discriminativeSamplingDistance_; /**<Sampling distance for checking discriminativity of patch (if <= 0.0 no check is performed).*/
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
+  
   // Oskar
+  bool removeHighDepthFeatures_;
+  double maxFeatureDepth_;
+
   bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
   bool clusterVerbose_;
   int numberOfClusters_;
@@ -244,6 +248,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
   mutable rovio::LandmarkOutput landmarkOutput_;
   mutable MXD landmarkOutputCov_;
+
+  // Oskar done
 
   // Temporary
   mutable PixelOutputCT pixelOutputCT_;
@@ -383,6 +389,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     alignmentGradientExponent_ = static_cast<double>(alignment_.gradientExponent_);
     doubleRegister_.registerScalar("alignmentGradientExponent",alignmentGradientExponent_);
     //Oskar
+    boolRegister_.registerScalar("removeHighDepthFeatures",removeHighDepthFeatures_);
+    doubleRegister_.registerScalar("maxFeatureDepth", maxFeatureDepth_);
+
     boolRegister_.registerScalar("useClusterFiltering",useClusterFiltering_);
     boolRegister_.registerScalar("clusterVerbose",clusterVerbose_);
     intRegister_.registerScalar("numberOfClusters", numberOfClusters_);
@@ -629,7 +638,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     }
     filterState.state_.aux().activeFeature_ = 0;
     filterState.state_.aux().activeCameraCounter_ = 0;
-
 
     /* Oskar removes bad features based on an awesome clustering algorithm!
     
@@ -931,6 +939,21 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           }
         }
       }
+
+      // Oskar remove features with high depths
+      if(removeHighDepthFeatures_){
+        for(unsigned int i=0;i<mtState::nMax_;i++){
+          if(filterState.fsm_.isValid_[i]){
+            if(filterState.state_.dep(i).getDistance() > maxFeatureDepth_){
+              if(verbose_) std::cout << "    \033[33mRemoved feature " << filterState.fsm_.features_[i].idx_ << " with invalid distance parameter " << filterState.state_.dep(i).p_ << "!\033[0m" << std::endl;
+              filterState.fsm_.isValid_[i] = false;
+              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              filterState.fsm_.centerId_[i] = -1;
+            }
+          }
+        }
+      }
+
 
       if(filterState.fsm_.isValid_[ID]){
         // Update status and visualization
