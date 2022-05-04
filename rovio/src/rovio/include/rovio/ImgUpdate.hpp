@@ -702,8 +702,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       float centers[numberOfClusters_] = {-1};
       float deviations[numberOfClusters_] = {-1};
       int n_clusters = numberOfClusters_;
-      if (cluster_points.size() > minClusterCount_){
-        kmeans(cluster_points, centers, deviations, numberOfClusters_);
+      if (cluster_points.size() > minClusterCount_ && kmeans(cluster_points, centers, deviations, numberOfClusters_)){
+
         std::cout << "Number of clusters is " << n_clusters << std::endl;
         for (int i = 0; i<n_clusters; i++){
           std::cout << "Center " << i << ": " << centers[i] << std::endl;
@@ -713,18 +713,18 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         if (n_clusters > 0){
           // Iterate over features to see if the match a cluster or not
           for (int i = 0; i < mtState::nMax_; i++){
-          // Is the feature valid and sufficiently certain?
+            // Is the feature valid and sufficiently certain?
             if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
               bool confirmedFeature = false;
               for (int k = 0; k < numberOfClusters_; k++){
-                if (abs(centers[k]-depths[i]) - stds[i] - deviations[k] < 0){
+                if (abs(centers[k]-depths[i]) - 3*stds[i] - deviations[k] < 0){
                   filterState.fsm_.centerId_[i] = k;
                   confirmedFeature = true;
                 }
               }
 
               if (!confirmedFeature){
-                std::cout << "Feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!" << std::endl;
+                std::cout << "  \033[31mRejected feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!\033[0m" << std::endl;
                 filterState.fsm_.isValid_[i] = false;
                 filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
                 filterState.fsm_.centerId_[i] = -1;
@@ -945,7 +945,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         for(unsigned int i=0;i<mtState::nMax_;i++){
           if(filterState.fsm_.isValid_[i]){
             if(filterState.state_.dep(i).getDistance() > maxFeatureDepth_){
-              if(verbose_) std::cout << "    \033[33mRemoved feature " << filterState.fsm_.features_[i].idx_ << " with invalid distance parameter " << filterState.state_.dep(i).p_ << "!\033[0m" << std::endl;
+              std::cout << "    \033[33mRemoved feature " << filterState.fsm_.features_[i].idx_ << " with invalid distance parameter " << filterState.state_.dep(i).p_ << "!\033[0m" << std::endl;
               filterState.fsm_.isValid_[i] = false;
               filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
               filterState.fsm_.centerId_[i] = -1;
@@ -1210,9 +1210,9 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 if(f.mpCoordinates_->getDepthFromTriangulation(alignedCoordinates_,state.qCM(otherCam).rotate(V3D(state.MrMC(camID)-state.MrMC(otherCam))),state.qCM(otherCam)*state.qCM(camID).inverted(), *f.mpDistance_, 0.01)){
                   // Oskar
                   f.isTriangulated = true;
-                  filterState.resetFeatureCovariance(*it,initCovFeature_);
+                  // filterState.resetFeatureCovariance(*it,initCovFeature_);
 
-                  /*
+                  
                   float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;
                   float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
                   float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
@@ -1223,7 +1223,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   initCovFeature_(0, 0) = temp;
                   
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
-                  */
+                  
                 }
                 else{
                   f.isTriangulated = false;

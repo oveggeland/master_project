@@ -12,10 +12,7 @@ int findClusterID(float* centers, float* deviations, float value, int K);
 // Helper to sort initial values of centers and deviations. Gives consistency in visualization outside of the algorithm
 void sort_centers_and_deviations(float* centers, float* deviations, int K);
 
-// Helpers to calculate silhoutte score
-float calculate_b(vector<float> A, int*clusters, float*centers, int K, int i);
-float calculate_a(vector<float> A, int*clusters, int i);
-
+// Helper to copy entire arrays
 void copy_array(float* src, float* dst, int size);
 
 
@@ -70,6 +67,7 @@ float kmeans(vector<float> &A, float* centers, float* deviations, int K){
     sort_centers_and_deviations(centers, deviations, K);
 
     int cluster[A.size()] = {-1};
+    int cnt[K] = {0};
     int prev_cnt[K] = {0};
     float lastErr = 0;
     
@@ -82,7 +80,7 @@ float kmeans(vector<float> &A, float* centers, float* deviations, int K){
         }
 
         //recalculate centers per cluster
-        int cnt[K] = {0};
+        memset(cnt, 0, K*sizeof(int));
         float sum[K] = {0};
         float tot_square_err[K] = {0};
         float err=0;
@@ -131,28 +129,17 @@ float kmeans(vector<float> &A, float* centers, float* deviations, int K){
         }
     }
 
-    // Perform silhoutte calculations
-    if (K == 0){
-
-    }
-    float sum = 0;
-
-    for (int i = 0; i < A.size(); i++){
-        // calculate a and b value for each point i
-        float a_val = calculate_a(A, cluster, i);
-        float b_val = 0;
-        if (K >= 2){
-            b_val = calculate_b(A, cluster, centers, K, i);
+    for (int k = 0; k < K; k++){
+        if (cnt[k] < 5){
+            std::cout << "Count on cluster " << k << " was only " << cnt[k] << std::endl;
+            return false;
         }
-
-        std::cout << "a_val is " << a_val << " b_val is " << b_val << std::endl;
-        if (a_val != 0){
-            sum += (b_val-a_val)/max(b_val, a_val);
+        else if (deviations[k]/centers[k] > 0.30){
+            std::cout << "Deviation on cluster was too big! Dev: " << deviations[k] << ", center: " << centers[k] << std::endl;
+            return false;
         }
     }
-
-    std::cout << "sum is " << sum << " A.size is " << A.size() << std::endl;
-    return sum / A.size();
+    return true;
 }
 
 
@@ -170,57 +157,6 @@ int findClusterID(float* centers, float* deviations, float value, int K){
     }
     return best_center;
 }
-
-
-// Helper, calculate a value in silhouette method
-float calculate_a(vector<float> A, int*clusters, int i){
-    float val = A[i];
-    float sum = 0;
-    int count = -1;
-    for (int j = 0; j < A.size(); j++){
-        if (clusters[i] == clusters[j]){
-            sum += abs(A[i] - A[j]);
-            count++;
-        }
-    }
-    if (count <= 0){
-        return 0;
-    }
-    return sum / count;
-}
-
-
-// Helper, calculate b value in silhouette method
-float calculate_b(vector<float> A, int*clusters, float*centers, int K, int i){
-    // Find closest center
-    int my_center = clusters[i];
-    float best_dist = INFINITY;
-    int closest_center = -1;
-    for (int k = 0; k < K; k++){
-        if (k != my_center){
-            float dist = abs(centers[k] - centers[my_center]);
-            if (dist < best_dist && centers[k] != -1){
-                best_dist = dist;
-                closest_center = k;
-            }
-        }
-    }
-
-    // Calculate average distance to this center
-    float sum = 0;
-    int count = 0;
-    for (int i = 0; i < A.size(); i++){
-        if (clusters[i] == closest_center){
-            sum += clusters[i];
-            count++;
-        }
-    }
-    if (count <= 0){
-        return 0;
-    }
-    return sum / count;
-}
-
 
 void sort_centers_and_deviations(float* centers, float* deviations, int K){
     // Sort in ascending order
