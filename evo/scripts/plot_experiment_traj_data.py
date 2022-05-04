@@ -182,3 +182,5 @@ if __name__ == "__main__":
         height_errors(all_data, plot_path, sys.argv[2]) # Not good?
     except:
         height_errors(all_data, plot_path)
+
+    #plt.show()

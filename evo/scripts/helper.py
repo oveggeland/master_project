@@ -45,6 +45,12 @@ def try_create_path(path):
         print(f"{path} is not a path, creating new")
         os.mkdir(path)
 
+def calculate_traj_length(data):
+    pos_data = data[:, 1:4]
+    diffs = np.diff(pos_data, axis=0)
+    norms = np.linalg.norm(diffs, axis=1)
+    return norms.sum()
+
 def quat_to_euler(quat, deg=True):
     x, y, z, w = tuple(quat)
     t0 = +2.0 * (w * x + y * z)
