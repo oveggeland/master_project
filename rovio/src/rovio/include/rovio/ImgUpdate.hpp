@@ -248,6 +248,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable rovio::LandmarkOutputImuCT<mtState> landmarkOutputImuCT_;
   mutable rovio::LandmarkOutput landmarkOutput_;
   mutable MXD landmarkOutputCov_;
+  
 
   // Oskar done
 
@@ -257,6 +258,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable MXD pixelOutputCov_;
   mutable rovio::TransformFeatureOutputCT<mtState> transformFeatureOutputCT_;
   mutable FeatureOutput featureOutput_;
+
   mutable MXD featureOutputCov_;
   mutable MXD featureOutputJac_;
 
@@ -1172,12 +1174,39 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                                                                     penaltyDistance_, zeroDistancePenalty_,false,minAbsoluteSTScore_);
         const double t3 = (double) cv::getTickCount();
         if(verbose_) std::cout << "== Got " << filterState.fsm_.getValidCount() << " after adding " << newSet.size() << " features in camera " << camID << " (" << (t3-t2)/cv::getTickFrequency()*1000 << " ms)" << std::endl;
-        for(auto it = newSet.begin();it != newSet.end();++it){
+        for(auto it = newSet.begin();it != newSet.end();++it){        
           FeatureManager<mtState::nLevels_,mtState::patchSize_,mtState::nCam_>& f = filterState.fsm_.features_[*it];
           f.mpStatistics_->resetStatistics(filterState.t_);
           f.mpStatistics_->status_[camID] = TRACKED;
           f.mpStatistics_->lastPatchUpdate_ = filterState.t_;
-          f.mpDistance_->p_ = medianDepthParameters[camID];
+
+          /* Oskar, here is probably a good place to play with initial depth values!
+          
+          My plan:
+          Instead of using a fixed depth, I use a fixed distance to the wall (distance in y-direction from IMU). I have to 
+          - Find the bearing vector of a feature, and transform it to world frame
+          - Find the scale factor that makes the bearing vector in world frame reach the assumed plane (wall/ground)
+          - Adjust initial depth with this factor
+          */
+
+          V3D CrCP = f.mpCoordinates_->get_nor().getVec();
+          QPD qMC = filterState.state_.qCM(camID);
+          QPD qWM = filterState.state_.qWM();
+
+          V3D WrCP = qWM.rotate(qMC.rotate(CrCP));
+
+          std::cout << "CrCP " << CrCP << std::endl;
+          std::cout << "WrCP " << WrCP << std::endl;
+
+          float init_depth = 20;
+          float adjusted_depth = init_depth/WrCP[0];
+          f.mpDistance_->p_ = 1/adjusted_depth;
+
+          std::cout << "After update, the depth is " << adjusted_depth << std::endl;
+
+          //f.mpDistance_->p_ = medianDepthParameters[camID];
+          
+          
           const float initRelDepthCovTemp_ = initCovFeature_(0,0);
           initCovFeature_(0,0) = initRelDepthCovTemp_*pow(f.mpDistance_->getParameterDerivative()*f.mpDistance_->getDistance(),2);
           filterState.resetFeatureCovariance(*it,initCovFeature_);
