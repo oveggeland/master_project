@@ -98,6 +98,7 @@ ImgUpdate
     startLevel 2;												Highest patch level which is being employed (must be smaller than the hardcoded template parameter)
     endLevel 1;													Lowest patch level which is being employed
     initDepth 25;												Initial value for the feature distances
+    extendedInit false;                                          Use the adjusted depth initialization to fit wall depths
 
     useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
     doStereoInitialization true;								Should a stereo match be used for feature initialization.
