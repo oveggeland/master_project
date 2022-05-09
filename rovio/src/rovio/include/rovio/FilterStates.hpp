@@ -665,7 +665,7 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
    *  @param medianDistances  - Array, containing the median distance parameter values for each camera.
    *  @param maxUncertaintyToDistanceRatio  - Maximal uncertainty where feature gets considered
    * */
-  void getMedianDepths(double initDistance, std::array<double,nCam>* medianDistances, const float maxUncertaintyToDistanceRatio) {
+  void getMedianDepths(double initDistance, std::array<double,nCam>* medianDistances, const float maxUncertaintyToDistanceRatio, bool extendedFlag=false) {
     // Fill array with initialization value.
     // The initialization value is set, if no median distance value can be computed for a given camera frame.
     medianDistances->fill(initDistance);
@@ -682,14 +682,18 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
             const double uncertainty = std::fabs(sqrt(featureOutputCov_(2,2))*featureOutput_.d().getDistanceDerivative());
             const double depth = featureOutput_.d().getDistance();
             if(uncertainty/depth < maxUncertaintyToDistanceRatio){
-              
-              V3D CrCP = fsm_.features_[i].mpCoordinates_->get_nor().getVec();
-              QPD qCM = state_.qCM(camID);
-              QPD qWM = state_.qWM();
+              if (extendedFlag){
+                V3D CrCP = fsm_.features_[i].mpCoordinates_->get_nor().getVec();
+                QPD qCM = state_.qCM(camID);
+                QPD qWM = state_.qWM();
 
-              float dist = qWM.rotate(qCM.inverseRotate(CrCP))[0]*fsm_.features_[i].mpDistance_->getDistance() + state_.WrWC(camID)[0];
+                float dist = qWM.rotate(qCM.inverseRotate(CrCP))[0]*fsm_.features_[i].mpDistance_->getDistance() + state_.WrWC(camID)[0];
 
-              distanceCollection[camID].push_back(dist);
+                distanceCollection[camID].push_back(dist);
+              }
+              else{
+                distanceCollection[camID].push_back(featureOutput_.d().getDistance());
+              }
             }
           }
         }

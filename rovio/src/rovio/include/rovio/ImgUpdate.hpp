@@ -233,6 +233,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double discriminativeSamplingGain_; /**<Gain for threshold above which the samples must lie (if <= 1.0 the patchRejectionTh is used).*/
   
   // Oskar
+  bool extendedInit_;
+
   bool removeHighDepthFeatures_;
   double maxFeatureDepth_;
 
@@ -391,6 +393,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     alignmentGradientExponent_ = static_cast<double>(alignment_.gradientExponent_);
     doubleRegister_.registerScalar("alignmentGradientExponent",alignmentGradientExponent_);
     //Oskar
+    boolRegister_.registerScalar("extendedInit", extendedInit_);
+
     boolRegister_.registerScalar("removeHighDepthFeatures",removeHighDepthFeatures_);
     doubleRegister_.registerScalar("maxFeatureDepth", maxFeatureDepth_);
 
@@ -1156,7 +1160,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       std::array<double, mtState::nCam_> medianDepths;
 
       if(maxUncertaintyToDepthRatioForDepthInitialization_>0){
-        filterState.getMedianDepths(initDepth_, &medianDepths,maxUncertaintyToDepthRatioForDepthInitialization_);
+        filterState.getMedianDepths(initDepth_, &medianDepths,maxUncertaintyToDepthRatioForDepthInitialization_, extendedInit_);
       } else {
         medianDepths.fill(initDepth_);
       }
@@ -1190,22 +1194,16 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
           - Find the scale factor that makes the bearing vector in world frame reach the assumed plane (wall/ground)
           - Adjust initial depth with this factor
           */  
+          if (extendedInit_){
+            float medianDepth = medianDepths[camID] - filterState.state_.WrWC(camID)[0];
+            V3D WrCP = filterState.state_.qWM().rotate(filterState.state_.qCM(camID).inverseRotate(f.mpCoordinates_->get_nor().getVec()));
 
-          std::cout << "Median depths is " << medianDepths[camID] << std::endl;
-          float medianDepth = medianDepths[camID] - filterState.state_.WrWC(camID)[0];
-          std::cout << "Adjust for cam position " << filterState.state_.WrWC(camID)[0] << std::endl;
-          std::cout << "Result is " << medianDepth << std::endl;
-
-          V3D CrCP = f.mpCoordinates_->get_nor().getVec();
-          std::cout << "CrCP " << CrCP << std::endl;
-          V3D MrCP = filterState.state_.qCM(camID).inverseRotate(CrCP);
-          std::cout << "MrCP " << MrCP << std::endl;
-          V3D WrCP = filterState.state_.qWM().rotate(MrCP);
-          std::cout << "WrCP " << WrCP << std::endl;
-
-          f.mpDistance_->setParameter(medianDepth/WrCP[0]);
-
-          std::cout << "After update, the depth is " << medianDepth/WrCP[0] << std::endl;
+            f.mpDistance_->setParameter(medianDepth/WrCP[0]);
+            std::cout << "After update, the depth is " << medianDepth/WrCP[0] << std::endl;
+          }
+          else{
+            f.mpDistance_->setParameter(medianDepths[camID]);
+          }
           
           
           const float initRelDepthCovTemp_ = initCovFeature_(0,0);
