@@ -660,17 +660,17 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
   /** \brief Get the median distance parameter values of the state features for each camera.
    *
    *  \note The distance parameter type depends on the set \ref DepthType.
-   *  @param initDistanceParameter     - Depth parameter value which is set, if no median distance parameter could be
+   *  @param initDistance     - Depth parameter value which is set, if no median distance parameter could be
    *                                  computed from the state features for a specific camera.
-   *  @param medianDistanceParameters  - Array, containing the median distance parameter values for each camera.
+   *  @param medianDistances  - Array, containing the median distance parameter values for each camera.
    *  @param maxUncertaintyToDistanceRatio  - Maximal uncertainty where feature gets considered
    * */
-  void getMedianDepthParameters(double initDistanceParameter, std::array<double,nCam>* medianDistanceParameters, const float maxUncertaintyToDistanceRatio) {
+  void getMedianDepths(double initDistance, std::array<double,nCam>* medianDistances, const float maxUncertaintyToDistanceRatio) {
     // Fill array with initialization value.
     // The initialization value is set, if no median distance value can be computed for a given camera frame.
-    medianDistanceParameters->fill(initDistanceParameter);
+    medianDistances->fill(initDistance);
     // Collect the distance values of the features for each camera frame.
-    std::vector<double> distanceParameterCollection[nCam];
+    std::vector<double> distanceCollection[nCam];
     for (unsigned int i = 0; i < nMax; i++) {
       if (fsm_.isValid_[i]) {
         for(int camID = 0;camID<nCam;camID++){
@@ -682,7 +682,14 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
             const double uncertainty = std::fabs(sqrt(featureOutputCov_(2,2))*featureOutput_.d().getDistanceDerivative());
             const double depth = featureOutput_.d().getDistance();
             if(uncertainty/depth < maxUncertaintyToDistanceRatio){
-              distanceParameterCollection[camID].push_back(featureOutput_.d().p_);
+              
+              V3D CrCP = fsm_.features_[i].mpCoordinates_->get_nor().getVec();
+              QPD qCM = state_.qCM(camID);
+              QPD qWM = state_.qWM();
+
+              float dist = qWM.rotate(qCM.inverseRotate(CrCP))[0]*fsm_.features_[i].mpDistance_->getDistance() + state_.WrWC(camID)[0];
+
+              distanceCollection[camID].push_back(dist);
             }
           }
         }
@@ -691,10 +698,10 @@ class FilterState: public LWF::FilterState<State<nMax,nLevels,patchSize,nCam,nPo
     // Compute and store the median distance parameter.
     int size;
     for (unsigned int i = 0; i < nCam; i++) {
-      size = distanceParameterCollection[i].size();
+      size = distanceCollection[i].size();
       if(size > 3) { // Require a minimum of three features
-        std::nth_element(distanceParameterCollection[i].begin(), distanceParameterCollection[i].begin() + size / 2, distanceParameterCollection[i].end());
-        (*medianDistanceParameters)[i] = distanceParameterCollection[i][size/2];
+        std::nth_element(distanceCollection[i].begin(), distanceCollection[i].begin() + size / 2, distanceCollection[i].end());
+        (*medianDistances)[i] = distanceCollection[i][size/2];
       }
     }
   }
