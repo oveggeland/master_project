@@ -183,4 +183,4 @@ if __name__ == "__main__":
     except:
         height_errors(all_data, plot_path)
 
-    #plt.show()
+    plt.show()

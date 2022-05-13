@@ -2,6 +2,7 @@ import os
 import math
 import numpy as np
 from numpy import rad2deg
+import pandas as pd
 from scipy.spatial.transform import Rotation as R
 
 
@@ -75,6 +76,45 @@ def rotate_vector(vec, quat):
     r = R.from_quat(quat)
     rot_vec = r.apply(vec)
     return rot_vec
+
+def read_pcl_data(exp):
+    data_path = os.path.join(EVO_PATH, "data", "depths", exp)
+    baselines = [name for name in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, name)) and name in BASELINES.keys()]
+    depth_data = {
+        bl:[] for bl in baselines
+    }
+
+    for bl in baselines:
+        bl_path = os.path.join(data_path, bl)
+        bl_data = []
+
+        runs = [name for name in os.listdir(bl_path) if os.path.isfile(os.path.join(bl_path, name))]
+        for run in runs:
+            run_data = pd.read_csv(os.path.join(bl_path, run), sep=" ").to_numpy()
+            bl_data.append(run_data[run_data[:, POINTID] != -1])
+        depth_data[bl] = bl_data
+    
+    return depth_data
+
+
+def read_traj_data(exp):
+    data_path = os.path.join(EVO_PATH, "data", "trajs", exp)
+    baselines = [name for name in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, name)) and name in BASELINES.keys()]
+    traj_data = {
+        bl:[] for bl in baselines
+    }
+
+    for bl in baselines:
+        bl_path = os.path.join(data_path, bl)
+        bl_data = []
+
+        runs = [name for name in os.listdir(bl_path) if os.path.isfile(os.path.join(bl_path, name))]
+        for run in runs:
+            run_data = pd.read_csv(os.path.join(bl_path, run), sep=" ").to_numpy()
+            bl_data.append(run_data[run_data[:, POINTID] != -1])
+
+        traj_data[bl] = bl_data
+    return traj_data
 
 if __name__ == "__main__":
     print("Testing stuff")

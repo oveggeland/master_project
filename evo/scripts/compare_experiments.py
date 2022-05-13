@@ -1,32 +1,35 @@
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
 import os
 import sys
 from helper import *
 
-def read_exp_data(exp):
-    data_path = os.path.join(EVO_PATH, "data", "trajs", exp)
-    baselines = [name for name in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, name)) and name in BASELINES.keys()]
-    all_data = {
-        bl:[] for bl in baselines
-    }
 
-    for bl in baselines:
-        bl_path = os.path.join(data_path, bl)
-        bl_data = []
+def triangulation_errors(exp, color, alpha, frame_count=1):
+    data = read_pcl_data(exp)
 
-        runs = [name for name in os.listdir(bl_path) if os.path.isfile(os.path.join(bl_path, name))]
-        for run in runs:
-            run_data = pd.read_csv(os.path.join(bl_path, run), sep=" ").to_numpy()
-            bl_data.append(run_data[run_data[:, POINTID] != -1])
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
 
-        all_data[bl] = bl_data
-    return all_data
+        bl_data = data[bl]
+        first_frames = [run[run[:, FRAMEID] <= frame_count] for run in bl_data]
+        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+
+        points = [np.unique(run[:, POINTID]) for run in tri_points]
+
+        for run_idx in range(len(points)):
+            run_data = tri_points[run_idx]
+            for point_idx in points[run_idx]:
+                point_data = run_data[run_data[:, POINTID] == point_idx]
+                initial_depth = point_data[0, DIST]
+
+                plt.scatter(BASELINES[bl], initial_depth, c=color, alpha=alpha)
+    
 
 def height_errors(exp, color, alpha):
-    data = read_exp_data(exp)
+    data = read_traj_data(exp)
 
     for bl in sorted(data.keys()):
         if bl not in BASELINES.keys():
@@ -42,7 +45,7 @@ def height_errors(exp, color, alpha):
 
 
 def pos_errors(exp, color, alpha):
-    data = read_exp_data(exp)
+    data = read_traj_data(exp)
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
@@ -58,6 +61,25 @@ def pos_errors(exp, color, alpha):
         # Scatterplot of errors
         plt.scatter([BASELINES[bl] for i in abs_pos_errors], abs_pos_errors, c=color, alpha=alpha, marker="_", s=1000, linewidth=5)
 
+def compare_triangulation(exp1, exp2, labels=None):
+    if not labels:
+        labels = [exp1, exp2]
+
+    fig = plt.figure("Compare triangulation depths")
+
+    triangulation_errors(exp1, color='b', alpha=0.3)
+    triangulation_errors(exp2, color='r', alpha=0.3)
+
+    red_patch = mpatches.Patch(color='red', label=labels[0])
+    blue_patch = mpatches.Patch(color='blue', label=labels[1])
+    plt.legend(handles=[red_patch, blue_patch])
+    
+    plt.xlabel("Baseline[cm]")
+    plt.ylabel("Triangulated depth[m]")
+    plt.ylim(0, 50)
+    plt.tight_layout()
+    plt.savefig(os.path.join(EVO_PATH, "compare", "triangulation", f"{exp1}_vs_{exp2}"))
+    plt.show()
 
 
 def compare_heights(exp1, exp2, gt=10):
@@ -103,3 +125,7 @@ if __name__ == "__main__":
 
     compare_heights(exp1, exp2)
     compare_errors(exp1, exp2)
+    if len(sys.argv) >= 5:
+        compare_triangulation(exp1, exp2, [sys.argv[3], sys.argv[4]])
+
+    plt.show()

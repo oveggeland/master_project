@@ -110,7 +110,7 @@ def initial_distance_per_baseline(data, trajs, frame_count=10, gt=20, plot_path=
         plt.savefig(os.path.join(plot_path, f"initial_distances_{frame_count}_frames.png"))
 
 
-def initial_depth_per_baseline(data, frame_count=10, plot_path=None):
+def initial_depth_per_baseline(data, frame_count=1, plot_path=None):
     plt.figure(f"Initial depths for the first {frame_count} frames")
 
     for bl in BASELINES.keys():
@@ -129,8 +129,10 @@ def initial_depth_per_baseline(data, frame_count=10, plot_path=None):
                 point_data = run_data[run_data[:, POINTID] == point_idx]
                 initial_depth = point_data[0, DIST]
 
-                plt.scatter(bl, initial_depth, c='r')
-                
+                plt.scatter(BASELINES[bl], initial_depth, c='r')
+
+    plt.ylabel("Triangulated depth[m]")    
+    plt.xlabel("Baseline[cm]")        
     if plot_path:
         plt.savefig(os.path.join(plot_path, f"initial_depths_{frame_count}_frames.png"))
 
