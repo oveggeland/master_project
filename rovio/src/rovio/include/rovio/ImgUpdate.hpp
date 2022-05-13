@@ -34,6 +34,7 @@
 #include "lightweight_filtering/State.hpp"
 
 #include "rovio/CoordinateTransform/FeatureOutput.hpp"
+#include "rovio/CoordinateTransform/FeatureOutputReadable.hpp"
 #include "rovio/FilterStates.hpp"
 #include "rovio/Camera.hpp"
 #include "rovio/CoordinateTransform/PixelOutput.hpp"
@@ -251,6 +252,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   mutable rovio::LandmarkOutput landmarkOutput_;
   mutable MXD landmarkOutputCov_;
   
+  rovio::FeatureOutputReadableCT featureOutputReadableCT_;
+  rovio::FeatureOutputReadable featureOutputReadable_;
+  MXD featureOutputReadableCov_;
+  
 
   // Oskar done
 
@@ -289,6 +294,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   ImgUpdate(): transformFeatureOutputCT_(nullptr),
       pixelOutputCov_((int)(PixelOutput::D_),(int)(PixelOutput::D_)),
       featureOutputCov_((int)(FeatureOutput::D_),(int)(FeatureOutput::D_)),
+      featureOutputReadableCov_((int)(FeatureOutputReadable::D_),(int)(FeatureOutputReadable::D_)),
       featureOutputJac_((int)(FeatureOutput::D_),(int)(mtState::D_)),
       canditateGenerationH_(2,(int)(mtState::D_)),
       canditateGenerationDifVec_((int)(mtState::D_),1),
@@ -437,6 +443,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     transformFeatureOutputCT_.mpMultiCamera_ = mpMultiCamera;
     //Oskar
     landmarkOutputImuCT_.mpMultiCamera_ = mpMultiCamera;
+
 
   }
 
@@ -734,6 +741,59 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 filterState.fsm_.isValid_[i] = false;
                 filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
                 filterState.fsm_.centerId_[i] = -1;
+              }
+              else{
+                // Find estimate of depth and its uncertainty
+                // Depth
+                float est = filterState.fsm_.features_[i].mpDistance_->getDistance();
+
+                // Uncertainty
+                transformFeatureOutputCT_.setFeatureID(i);
+                transformFeatureOutputCT_.setOutputCameraID(filterState.fsm_.features_[i].mpCoordinates_->camID_);
+                transformFeatureOutputCT_.transformState(filterState.state_,featureOutput_);
+                transformFeatureOutputCT_.transformCovMat(filterState.state_,filterState.cov_,featureOutputCov_);
+                featureOutputReadableCT_.transformState(featureOutput_,featureOutputReadable_);
+                featureOutputReadableCT_.transformCovMat(featureOutput_,featureOutputCov_,featureOutputReadableCov_);
+                float est_cov = static_cast<float>(featureOutputReadableCov_(3,3));
+                //float est_cov = 1;
+                std::cout << "estimated depth is " << est << std::endl;
+                std::cout << "estimated depth cov is " << est_cov << std::endl;
+
+                
+                // Find measured depth and uncertainty
+                V3D CrCP = filterState.fsm_.features_[i].mpCoordinates_->get_nor().getVec()*est;
+                std::cout << "CrCP" << CrCP << std::endl;
+                float dist = centers[filterState.fsm_.centerId_[i]];
+                float dist_plus = dist + deviations[filterState.fsm_.centerId_[i]];
+
+                std::cout << "Dists " << dist << ", " << dist_plus << std::endl;
+
+                V3D WrCP = filterState.state_.qCW(filterState.fsm_.features_[i].mpCoordinates_->camID_).inverseRotate(CrCP);
+                std::cout << "WrCP" << WrCP << std::endl;
+                float scale = dist/WrCP[depthDirection_];
+                float scale_plus = dist_plus/WrCP[depthDirection_];
+
+                std::cout << "Scales " << scale << ", " << scale_plus << std::endl;
+
+                V3D center = CrCP * scale;
+                V3D center_plus = CrCP*scale_plus;
+                
+                std::cout << "Center " << center << std::endl;
+                std::cout << "Center plus " << center_plus << std::endl;
+
+                // Depth and cov
+                float meas = center.norm();
+                float meas_cov = pow((center_plus-center).norm(), 2);
+
+                std::cout << "measured depth is " << meas << std::endl;
+                std::cout << "measured depth cov is " << meas_cov << std::endl;
+
+                // Kalman gain
+                float K_i = est_cov/(est_cov + meas_cov);
+                std::cout << "Kalman gain is " << K_i << std::endl;
+
+                float update_depth = est + (meas-est)*K_i;
+                std::cout << "Updated depth is " << update_depth << std::endl << std::endl;
               }
             }
           }
@@ -1240,7 +1300,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   f.isTriangulated = true;
                   // filterState.resetFeatureCovariance(*it,initCovFeature_);
 
-                  
+                  /*
                   float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;
                   float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
                   float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
@@ -1249,7 +1309,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                   initCovFeature_(0, 0) = pow(depth_uncertainty, 2);     // TODO: Find out if this should be squared or not
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   initCovFeature_(0, 0) = temp;
-                  
+                  */
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   
                 }
