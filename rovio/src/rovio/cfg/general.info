@@ -106,8 +106,9 @@ ImgUpdate
     removeHighDepthFeatures false;                               Remove features with unlikely large distances
     maxFeatureDepth 100;                                        Threshold for removing features
 
-    useClusterFiltering false;                                   Outlier detection by assuming that features should be on the same plane
-    clusterVerbose false;                                        Verbose debugging prints
+    useClusterFiltering true;                                   Outlier detection by assuming that features should be on the same plane
+    updateDepths true;                                         Should accepted points be updated?
+    clusterVerbose false;                                       Verbose debugging prints
     numberOfClusters 2;                                         Number of clusters assumed to exist
     depthDirection 0;                                           Direction of planar landing ground 0=x(forward), 1=y(sideways), 2=z(downwards). 2 is most commen for actual vtol!
     minClusterDepth 2;                                          Minimum depth to be used in clustering 

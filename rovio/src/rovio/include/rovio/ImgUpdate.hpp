@@ -240,6 +240,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   double maxFeatureDepth_;
 
   bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
+  bool updateDepths_;
   bool clusterVerbose_;
   int numberOfClusters_;
   int depthDirection_;
@@ -405,7 +406,8 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("maxFeatureDepth", maxFeatureDepth_);
 
     boolRegister_.registerScalar("useClusterFiltering",useClusterFiltering_);
-    boolRegister_.registerScalar("clusterVerbose",clusterVerbose_);
+    boolRegister_.registerScalar("updateDepths",updateDepths_);
+    boolRegister_.registerScalar("updateDepths",clusterVerbose_);
     intRegister_.registerScalar("numberOfClusters", numberOfClusters_);
     intRegister_.registerScalar("depthDirection", depthDirection_);
     intRegister_.registerScalar("minClusterCount", minClusterCount_);
@@ -687,15 +689,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
 
         float depth_std = sqrt(cov_depth_direction.norm());
         filterState.fsm_.stds_[i] = depth_std;
-
-        if (clusterVerbose_){
-          std::cout << "Robocentric landmark position is " << MrMP[0] << ", " << MrMP[1] << ", " << MrMP[2] << std::endl;
-          std::cout << "World centered landmark position is " << WrWP[0] << ", " << WrWP[1] << ", " << WrWP[2] << std::endl;
-          std::cout << "Robocentric covariance of landmark is" << std::endl << cov_MrMP << std::endl;
-          std::cout << "Robocentric depth vector is " << robocentric_depth_vector[0] << ", " << robocentric_depth_vector[1] << ", " << robocentric_depth_vector[2] << std::endl;
-          std::cout << "Covariance in depth direction is " << cov_depth_direction[0] << ", " << cov_depth_direction[1] << ", " << cov_depth_direction[2] << std::endl;
-          std::cout << "Depth std is " << depth_std << std::endl << std::endl;
-        }
       }
       
       // Get point depths and standard deviations 
@@ -717,7 +710,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       int n_clusters = numberOfClusters_;
       if (cluster_points.size() > minClusterCount_ && kmeans(cluster_points, centers, deviations, numberOfClusters_)){
 
-        std::cout << "Number of clusters is " << n_clusters << std::endl;
         for (int i = 0; i<n_clusters; i++){
           std::cout << "Center " << i << ": " << centers[i] << std::endl;
           std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
@@ -729,10 +721,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
             // Is the feature valid and sufficiently certain?
             if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
               bool confirmedFeature = false;
+              float best_score = INFINITY;
               for (int k = 0; k < numberOfClusters_; k++){
-                if (abs(centers[k]-depths[i]) - 3*stds[i] - deviations[k] < 0){
+                float score = abs(centers[k]-depths[i]) - 3*stds[i] - deviations[k];
+                if (score < 0 && score < best_score){
                   filterState.fsm_.centerId_[i] = k;
                   confirmedFeature = true;
+                  best_score = score;
                 }
               }
 
@@ -742,7 +737,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
                 filterState.fsm_.centerId_[i] = -1;
               }
-              else{
+              else if (updateDepths_){
                 // Find estimate of depth and its uncertainty
                 // Depth
                 float est = filterState.fsm_.features_[i].mpDistance_->getDistance();
@@ -794,6 +789,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
 
                 float update_depth = est + (meas-est)*K_i;
                 std::cout << "Updated depth is " << update_depth << std::endl << std::endl;
+
+                if (abs(meas-est) < sqrt(meas_cov)){
+                  filterState.fsm_.features_[i].mpDistance_->setParameter(update_depth);
+                }
               }
             }
           }
