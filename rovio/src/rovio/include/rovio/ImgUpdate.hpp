@@ -239,7 +239,10 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
   bool removeHighDepthFeatures_;
   double maxFeatureDepth_;
 
-  bool useClusterFiltering_; // Flag to tell if I should use the clustering technique
+  float* centers;
+  float* deviations;
+
+  bool useClusterFiltering_; 
   bool updateDepths_;
   bool clusterVerbose_;
   int numberOfClusters_;
@@ -414,6 +417,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     doubleRegister_.registerScalar("minClusterDepth", minClusterDepth_);
     doubleRegister_.registerScalar("clusterDistanceThresh", clusterDistanceThresh_);
     doubleRegister_.registerScalar("clusterUncertaintyThresh", clusterUncertaintyThresh_);
+
+    centers = new float[numberOfClusters_];
+    deviations = new float[numberOfClusters_];
+    for(int i = 0; i < numberOfClusters_; i++){
+      centers[i] = -1;
+      deviations[i] = -1;
+    } 
   };
 
   /** \brief Destructor
@@ -654,152 +664,6 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
     filterState.state_.aux().activeFeature_ = 0;
     filterState.state_.aux().activeCameraCounter_ = 0;
 
-    /* Oskar removes bad features based on an awesome clustering algorithm!
-    
-    1. Take all points that is sufficiently converged in depth direction (std/depth < thresh)
-    2. Cluster these points into K groups and find their centers
-    3. For each point with sufficient convergence in depth direction (std/depth < thresh):
-          - Check if sufficiently close to each of K centers
-          - If not, discard feature
-    */
-    if (useClusterFiltering_){
-      // Update dephts and stds in filterState!
-      V3D WrWM = filterState.state_.WrWM();
-      QPD qWM = filterState.state_.qWM();
-      MXD cov = filterState.cov_;
-      for (int i = 0; i < mtState::nMax_; i++){
-        // Update landmark outputs to the relevant feature
-        landmarkOutputImuCT_.setFeatureID(i);
-        landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
-        landmarkOutputImuCT_.transformCovMat(filterState.state_, cov, landmarkOutputCov_);
-
-        // Get the depth of the feature
-        Eigen::Vector3f MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
-        V3D WrWP = WrWM + qWM.rotate(V3D(MrMP[0], MrMP[1], MrMP[2]));
-
-        filterState.fsm_.depths_[i] = WrWP[depthDirection_];
-
-        // Get the depth uncertainty of the feature
-        M3D cov_MrMP = landmarkOutputCov_.cast<double>();
-        
-        V3D unit_depth_vector(0,0,0);
-        unit_depth_vector[depthDirection_] = 1;
-        V3D robocentric_depth_vector = qWM.inverseRotate(unit_depth_vector);
-        V3D cov_depth_direction = cov_MrMP*robocentric_depth_vector;
-
-        float depth_std = sqrt(cov_depth_direction.norm());
-        filterState.fsm_.stds_[i] = depth_std;
-      }
-      
-      // Get point depths and standard deviations 
-      float* depths = filterState.fsm_.depths_;
-      float* stds = filterState.fsm_.stds_;
-
-      // Check if points are valid for clustering
-      std::vector<float> cluster_points = {};
-      for (int i = 0; i <  mtState::nMax_; i++){
-        if (filterState.fsm_.isValid_[i] && depths[i] > minClusterDepth_ && stds[i]/depths[i] < clusterUncertaintyThresh_){
-          cluster_points.push_back(depths[i]);
-        }
-      }
-      
-
-      // Run kmeans to create clusters
-      float centers[numberOfClusters_] = {-1};
-      float deviations[numberOfClusters_] = {-1};
-      int n_clusters = numberOfClusters_;
-      if (cluster_points.size() > minClusterCount_ && kmeans(cluster_points, centers, deviations, numberOfClusters_)){
-
-        for (int i = 0; i<n_clusters; i++){
-          std::cout << "Center " << i << ": " << centers[i] << std::endl;
-          std::cout << "Deviation " << i << ": " << deviations[i] << std::endl;
-        }
-
-        if (n_clusters > 0){
-          // Iterate over features to see if the match a cluster or not
-          for (int i = 0; i < mtState::nMax_; i++){
-            // Is the feature valid and sufficiently certain?
-            if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
-              bool confirmedFeature = false;
-              float best_score = INFINITY;
-              for (int k = 0; k < numberOfClusters_; k++){
-                float score = abs(centers[k]-depths[i]) - 3*stds[i] - deviations[k];
-                if (score < 0 && score < best_score){
-                  filterState.fsm_.centerId_[i] = k;
-                  confirmedFeature = true;
-                  best_score = score;
-                }
-              }
-
-              if (!confirmedFeature){
-                std::cout << "  \033[31mRejected feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!\033[0m" << std::endl;
-                filterState.fsm_.isValid_[i] = false;
-                filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
-                filterState.fsm_.centerId_[i] = -1;
-              }
-              else if (updateDepths_){
-                // Find estimate of depth and its uncertainty
-                // Depth
-                float est = filterState.fsm_.features_[i].mpDistance_->getDistance();
-
-                // Uncertainty
-                transformFeatureOutputCT_.setFeatureID(i);
-                transformFeatureOutputCT_.setOutputCameraID(filterState.fsm_.features_[i].mpCoordinates_->camID_);
-                transformFeatureOutputCT_.transformState(filterState.state_,featureOutput_);
-                transformFeatureOutputCT_.transformCovMat(filterState.state_,filterState.cov_,featureOutputCov_);
-                featureOutputReadableCT_.transformState(featureOutput_,featureOutputReadable_);
-                featureOutputReadableCT_.transformCovMat(featureOutput_,featureOutputCov_,featureOutputReadableCov_);
-                float est_cov = static_cast<float>(featureOutputReadableCov_(3,3));
-                //float est_cov = 1;
-                std::cout << "estimated depth is " << est << std::endl;
-                std::cout << "estimated depth cov is " << est_cov << std::endl;
-
-                
-                // Find measured depth and uncertainty
-                V3D CrCP = filterState.fsm_.features_[i].mpCoordinates_->get_nor().getVec()*est;
-                std::cout << "CrCP" << CrCP << std::endl;
-                float dist = centers[filterState.fsm_.centerId_[i]];
-                float dist_plus = dist + deviations[filterState.fsm_.centerId_[i]];
-
-                std::cout << "Dists " << dist << ", " << dist_plus << std::endl;
-
-                V3D WrCP = filterState.state_.qCW(filterState.fsm_.features_[i].mpCoordinates_->camID_).inverseRotate(CrCP);
-                std::cout << "WrCP" << WrCP << std::endl;
-                float scale = dist/WrCP[depthDirection_];
-                float scale_plus = dist_plus/WrCP[depthDirection_];
-
-                std::cout << "Scales " << scale << ", " << scale_plus << std::endl;
-
-                V3D center = CrCP * scale;
-                V3D center_plus = CrCP*scale_plus;
-                
-                std::cout << "Center " << center << std::endl;
-                std::cout << "Center plus " << center_plus << std::endl;
-
-                // Depth and cov
-                float meas = center.norm();
-                float meas_cov = pow((center_plus-center).norm(), 2);
-
-                std::cout << "measured depth is " << meas << std::endl;
-                std::cout << "measured depth cov is " << meas_cov << std::endl;
-
-                // Kalman gain
-                float K_i = est_cov/(est_cov + meas_cov);
-                std::cout << "Kalman gain is " << K_i << std::endl;
-
-                float update_depth = est + (meas-est)*K_i;
-                std::cout << "Updated depth is " << update_depth << std::endl << std::endl;
-
-                if (abs(meas-est) < sqrt(meas_cov)){
-                  filterState.fsm_.features_[i].mpDistance_->setParameter(update_depth);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
 
     /* Detect Image changes by looking at the feature patches between current and previous image (both at the current feature location)
      * The maximum change of intensity is obtained if the pixel is moved along the strongest gradient.
@@ -829,6 +693,7 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
       }
     }
   }
+
 
   /** \brief Pre-Processing for the image update.
    *
@@ -1188,6 +1053,130 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
         }
       }
     }
+
+
+    /* Oskar removes bad features based on an awesome clustering algorithm!
+    
+    1. Take all points that is sufficiently converged in depth direction (std/depth < thresh)
+    2. Cluster these points into K groups and find their centers
+    3. For each point with sufficient convergence in depth direction (std/depth < thresh):
+          - Check if sufficiently close to each of K centers
+          - If not, discard feature
+    */
+    if (useClusterFiltering_){
+      // Update dephts and stds in filterState!
+      V3D WrWM = filterState.state_.WrWM();
+      QPD qWM = filterState.state_.qWM();
+      for (int i = 0; i < mtState::nMax_; i++){
+        // Update landmark outputs to the relevant feature
+        landmarkOutputImuCT_.setFeatureID(i);
+        landmarkOutputImuCT_.transformState(filterState.state_,landmarkOutput_);
+        landmarkOutputImuCT_.transformCovMat(filterState.state_, filterState.cov_, landmarkOutputCov_);
+
+        // Get the depth of the feature
+        Eigen::Vector3f MrMP = landmarkOutput_.get<LandmarkOutput::_lmk>().template cast<float>();
+        V3D WrWP = WrWM + qWM.rotate(V3D(MrMP[0], MrMP[1], MrMP[2]));
+
+        filterState.fsm_.depths_[i] = WrWP[depthDirection_];
+
+        // Get the depth uncertainty of the feature
+        M3D cov_MrMP = landmarkOutputCov_.cast<double>();
+        
+        V3D unit_depth_vector(0,0,0);
+        unit_depth_vector[depthDirection_] = 1;
+        V3D robocentric_depth_vector = qWM.inverseRotate(unit_depth_vector);
+        V3D cov_depth_direction = cov_MrMP*robocentric_depth_vector;
+
+        float depth_std = sqrt(cov_depth_direction.norm());
+        filterState.fsm_.stds_[i] = depth_std;
+      }
+      
+      // Get point depths and standard deviations 
+      float* depths = filterState.fsm_.depths_;
+      float* stds = filterState.fsm_.stds_;
+
+      // Check if points are valid for clustering
+      std::vector<float> cluster_points = {};
+      for (int i = 0; i <  mtState::nMax_; i++){
+        if (filterState.fsm_.isValid_[i] && depths[i] > minClusterDepth_ && stds[i]/depths[i] < clusterUncertaintyThresh_){
+          cluster_points.push_back(depths[i]);
+        }
+      }
+      
+
+      // Run kmeans to create clusters
+      if (cluster_points.size() > minClusterCount_ && kmeans(cluster_points, centers, deviations, numberOfClusters_)){
+
+        // Iterate over features to see if the match a cluster or not
+        for (int i = 0; i < mtState::nMax_; i++){
+
+          // Is the feature valid and sufficiently certain?
+          if (filterState.fsm_.isValid_[i] && stds[i]/depths[i] < clusterUncertaintyThresh_){
+            bool confirmedFeature = false;
+            float best_score = INFINITY;
+            for (int k = 0; k < numberOfClusters_; k++){
+              float score = abs(centers[k]-depths[i]) - 3*stds[i] - deviations[k];
+              if (score < 0 && score < best_score){
+                filterState.fsm_.centerId_[i] = k;
+                confirmedFeature = true;
+                best_score = score;
+              }
+            }
+
+            if (!confirmedFeature){
+              std::cout << "  \033[31mRejected feature " << filterState.fsm_.features_[i].idx_ << " with depth " << depths[i] << " and std " << stds[i] << " was filtered out!\033[0m" << std::endl;
+              filterState.fsm_.isValid_[i] = false;
+              filterState.resetFeatureCovariance(i,Eigen::Matrix3d::Identity());
+              filterState.fsm_.centerId_[i] = -1;
+            }
+            else if (updateDepths_){
+              // Find estimate of depth and its uncertainty
+              // Depth
+              float est = filterState.fsm_.features_[i].mpDistance_->getDistance();
+
+              // Uncertainty
+              transformFeatureOutputCT_.setFeatureID(i);
+              transformFeatureOutputCT_.setOutputCameraID(filterState.fsm_.features_[i].mpCoordinates_->camID_);
+              transformFeatureOutputCT_.transformState(filterState.state_,featureOutput_);
+              transformFeatureOutputCT_.transformCovMat(filterState.state_,filterState.cov_,featureOutputCov_);
+              featureOutputReadableCT_.transformState(featureOutput_,featureOutputReadable_);
+              featureOutputReadableCT_.transformCovMat(featureOutput_,featureOutputCov_,featureOutputReadableCov_);
+              float est_cov = static_cast<float>(featureOutputReadableCov_(3,3));
+              
+              // Find measured depth and uncertainty
+              V3D CrCP = filterState.fsm_.features_[i].mpCoordinates_->get_nor().getVec()*est;
+              V3D WrCP = filterState.state_.qCW(filterState.fsm_.features_[i].mpCoordinates_->camID_).inverseRotate(CrCP);
+              
+              float dist = centers[filterState.fsm_.centerId_[i]] - filterState.state_.WrWC(filterState.fsm_.features_[i].mpCoordinates_->camID_)[depthDirection_];
+              float dist_plus = dist + deviations[filterState.fsm_.centerId_[i]];
+
+            
+              float scale = dist/WrCP[depthDirection_];
+              float scale_plus = dist_plus/WrCP[depthDirection_];
+
+
+              V3D center = CrCP * scale;
+              V3D center_plus = CrCP*scale_plus;
+            
+
+              // Depth and cov
+              float meas = center.norm();
+              float meas_cov = pow((center_plus-center).norm(), 2);
+
+
+              // Kalman gain
+              float K_i = 0.1*est_cov/(est_cov + meas_cov);
+
+              float update_depth = est + (meas-est)*K_i;
+              
+              if (abs(meas-est) > sqrt(meas_cov)){
+                filterState.fsm_.features_[i].mpDistance_->setParameter(update_depth);
+              }
+            }
+          }
+        }
+      }
+    }
     
 
 
@@ -1297,24 +1286,13 @@ ImgOutlierDetection<typename FILTERSTATE::mtState>,false>{
                 if(f.mpCoordinates_->getDepthFromTriangulation(alignedCoordinates_,state.qCM(otherCam).rotate(V3D(state.MrMC(camID)-state.MrMC(otherCam))),state.qCM(otherCam)*state.qCM(camID).inverted(), *f.mpDistance_, 0.01)){
                   // Oskar
                   f.isTriangulated = true;
-                  // filterState.resetFeatureCovariance(*it,initCovFeature_);
-
-                  /*
-                  float focal_length = (mpMultiCamera_->cameras_[otherCam].K_(0, 0) + mpMultiCamera_->cameras_[otherCam].K_(1, 1))/2;
-                  float px_error_angle = 2*atan(updateNoisePix_/2*focal_length);
-                  float depth_uncertainty = f.mpCoordinates_->getDepthUncertaintyTau(state.qCM(camID).rotate(V3D(state.MrMC(otherCam)-state.MrMC(camID))), f.mpDistance_->getDistance(), px_error_angle);
-
-                  const float temp = initCovFeature_(0,0);
-                  initCovFeature_(0, 0) = pow(depth_uncertainty, 2);     // TODO: Find out if this should be squared or not
-                  filterState.resetFeatureCovariance(*it,initCovFeature_);
-                  initCovFeature_(0, 0) = temp;
-                  */
                   filterState.resetFeatureCovariance(*it,initCovFeature_);
                   
                 }
                 else{
                   f.isTriangulated = false;
                 }
+
               } else {
                 if(doFrameVisualisation_){
                   alignedCoordinates_.drawPoint(filterState.img_[otherCam], cv::Scalar(0,0,150));
