@@ -21,7 +21,7 @@ def create_depth_data(bagpath):
     # PCL values
     n_points = 25
     point_step = 80
-    # [point_id, cam_id, cam0_st, cam1_st, d, d_cov, tri]
+    # [point_id, cam_id, cam0_st, cam1_st, d, d_cov, tri, x, y, z]
     offsets = [0, 4, 12, 16, 44, 72, 76, 20, 24, 28]
 
     frame_id = 0

@@ -79,23 +79,27 @@ def plot_depth_trajectory(data, plot_path=None):
         if plot_path:
             plt.savefig(os.path.join(plot_path, bl, "depth_trajectory.png"))
 
-def initial_distance_per_baseline(data, trajs, frame_count=1, gt=10, plot_path=None):
-    plt.figure(f"Initial distance for the first {frame_count} frames")
+def initial_distance_per_baseline(data, trajs, gt=10, stereo=True, plot_path=None):
+    plt.figure(f"Initial distances from wall")
     plt.axhline(gt, label='gt', linestyle='dashed')
+
+    distance = 0
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
 
         bl_trajs = trajs[bl]
         bl_data = data[bl]
-        first_frames = [run[run[:, FRAMEID] == 1] for run in bl_data]
-        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
 
-        points = [np.unique(run[:, POINTID]) for run in tri_points]
+        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
+        if stereo:
+            first_frames = [run[run[:, TRI] == 1] for run in first_frames]
+
+        points = [np.unique(run[:, POINTID]) for run in first_frames]
 
         for run_idx in range(len(points)):
             run_traj = bl_trajs[run_idx]
-            run_data = tri_points[run_idx]
+            run_data = first_frames[run_idx]
             for point_idx in points[run_idx]:
                 point_data = run_data[run_data[:, POINTID] == point_idx]
                 vector = point_data[0, [X, Y, Z]]
@@ -116,24 +120,25 @@ def initial_distance_per_baseline(data, trajs, frame_count=1, gt=10, plot_path=N
     plt.ylabel("Distance[m]")
     plt.xlabel("Baseline[cm]")
     if plot_path:
-        plt.savefig(os.path.join(plot_path, f"initial_distances_{frame_count}_frames.png"))
+        plt.savefig(os.path.join(plot_path, f"initial_distances.png"))
 
 
-def initial_depth_per_baseline(data, frame_count=1, plot_path=None):
-    plt.figure(f"Initial depths for the first {frame_count} frames")
+def initial_depth_per_baseline(data, stereo=True, plot_path=None):
+    plt.figure(f"Initial depths")
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
 
         bl_data = data[bl]
-        first_frames = [run[run[:, FRAMEID] <= frame_count] for run in bl_data]
-        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
+        if stereo:
+            first_frames = [run[run[:, TRI] == 1] for run in first_frames]
 
-        points = [np.unique(run[:, POINTID]) for run in tri_points]
+        points = [np.unique(run[:, POINTID]) for run in first_frames]
 
         for run_idx in range(len(points)):
-            run_data = tri_points[run_idx]
+            run_data = first_frames[run_idx]
             for point_idx in points[run_idx]:
                 point_data = run_data[run_data[:, POINTID] == point_idx]
                 initial_depth = point_data[0, DIST]
@@ -143,9 +148,9 @@ def initial_depth_per_baseline(data, frame_count=1, plot_path=None):
     plt.ylabel("Triangulated depth[m]")    
     plt.xlabel("Baseline[cm]")        
     if plot_path:
-        plt.savefig(os.path.join(plot_path, f"initial_depths_{frame_count}_frames.png"))
+        plt.savefig(os.path.join(plot_path, f"initial_depths.png"))
 
-def initial_distance_distribution(data, traj, plot_path=None):
+def initial_distance_distribution(data, traj, gt=10, stereo=True, plot_path=None):
     plt.figure(f"Initial distance distribution")
 
     for bl in BASELINES.keys():
@@ -154,16 +159,17 @@ def initial_distance_distribution(data, traj, plot_path=None):
         
         bl_trajs = traj[bl]
         bl_data = data[bl]
-        first_frames = [run[run[:, FRAMEID] <= 1] for run in bl_data]
+        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
 
-        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+        if stereo:
+            first_frames = [run[run[:, TRI] == 1] for run in first_frames]
 
-        dists = np.zeros((sum([element.shape[0] for element in tri_points])))
+        dists = np.zeros((sum([element.shape[0] for element in first_frames])))
 
         cnt = 0
         for run_idx in range(len(bl_trajs)):
             run_traj = bl_trajs[run_idx]
-            run_points = tri_points[run_idx]
+            run_points = first_frames[run_idx]
 
             for i in range(run_points.shape[0]):
                 point_data = run_points[i, :]
@@ -181,8 +187,9 @@ def initial_distance_distribution(data, traj, plot_path=None):
         sns.distplot(dists, label=f"{BASELINES[bl]}cm", hist=False, norm_hist=True)
 
 
-    plt.axvline(20, label='gt', linestyle='dashed')
-    plt.xlim(10, 30)
+    plt.axvline(gt, label='gt', linestyle='dashed')
+    x_min, x_max = plt.xlim()
+    plt.xlim(max(x_min, gt-10), min(x_max, gt+10))
     plt.ylabel("Probability density")    
     plt.xlabel("Distance triangulated")    
     plt.legend()
@@ -190,7 +197,7 @@ def initial_distance_distribution(data, traj, plot_path=None):
     if plot_path:
         plt.savefig(os.path.join(plot_path, f"initial_distance_disttribution.png"))
 
-def initial_depth_distribution(data, plot_path=None):
+def initial_depth_distribution(data, stereo=True, plot_path=None):
     plt.figure(f"Initial depth distribution")
 
     for bl in BASELINES.keys():
@@ -198,11 +205,12 @@ def initial_depth_distribution(data, plot_path=None):
             continue
         
         bl_data = data[bl]
-        first_frames = [run[run[:, FRAMEID] <= 1] for run in bl_data]
+        first_frames = [run[run[:, FRAMEID] == 0] for run in bl_data]
 
-        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+        if stereo:
+            first_frames = [run[run[:, TRI] == 1] for run in first_frames]
 
-        all_data = np.vstack((tri_points))
+        all_data = np.vstack((first_frames))
 
         dists = all_data[:, DIST]
 
@@ -307,13 +315,16 @@ if __name__ == "__main__":
         traj_data[bl] = bl_traj_data
     
     # Different plot functions to visualize the data
-    initial_distance_distribution(depth_data, traj_data, plot_path=None)    
-    initial_distance_per_baseline(depth_data, traj_data, 1, 20, plot_path=None)
+    initial_distance_distribution(depth_data, traj_data, gt=10, stereo=False, plot_path=None)    
+    initial_distance_per_baseline(depth_data, traj_data, gt=10, stereo=False, plot_path=None)
+    
+    initial_depth_distribution(depth_data, stereo=False, plot_path=None)  
+    initial_depth_per_baseline(depth_data, stereo=False, plot_path=None)  
+
     plt.show()
     """
-    initial_depth_distribution(depth_data, plot_path)    
     plot_depth_trajectory(depth_data, plot_path)
     plot_distance_trajectory(depth_data, traj_data, plot_path)
-    initial_depth_per_baseline(depth_data, 1, plot_path)
+
     average_uncertainty_per_distance(depth_data, plot_path)
     """

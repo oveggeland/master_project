@@ -202,7 +202,7 @@ class RovioNode{
     forceTransformPublishing_ = false;
     forceExtrinsicsPublishing_ = false;
     forceImuBiasPublishing_ = false;
-    forcePclPublishing_ = false;
+    forcePclPublishing_ = true;
     forceMarkersPublishing_ = false;
     forcePatchPublishing_ = false;
     gotFirstMessages_ = false;

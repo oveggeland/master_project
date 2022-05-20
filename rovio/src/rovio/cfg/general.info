@@ -100,13 +100,13 @@ ImgUpdate
     initDepth 25;												Initial value for the feature distances
     extendedInit false;                                          Use the adjusted depth initialization to fit wall depths
 
-    useCrossCameraMeasurements true;							Should cross measurements between frame be used. Might be turned of in calibration phase.
-    doStereoInitialization true;								Should a stereo match be used for feature initialization.
+    useCrossCameraMeasurements false;							Should cross measurements between frame be used. Might be turned of in calibration phase.
+    doStereoInitialization false;								Should a stereo match be used for feature initialization.
     
     removeHighDepthFeatures false;                               Remove features with unlikely large distances
     maxFeatureDepth 100;                                        Threshold for removing features
 
-    useClusterFiltering true;                                   Outlier detection by assuming that features should be on the same plane
+    useClusterFiltering false;                                   Outlier detection by assuming that features should be on the same plane
     updateDepths true;                                         Should accepted points be updated?
     clusterVerbose false;                                       Verbose debugging prints
     numberOfClusters 2;                                         Number of clusters assumed to exist
