@@ -6,7 +6,9 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from scripts.helper import rotate_vector
+import seaborn as sns
 
 from helper import *
 
@@ -77,16 +79,16 @@ def plot_depth_trajectory(data, plot_path=None):
         if plot_path:
             plt.savefig(os.path.join(plot_path, bl, "depth_trajectory.png"))
 
-def initial_distance_per_baseline(data, trajs, frame_count=10, gt=20, plot_path=None):
+def initial_distance_per_baseline(data, trajs, frame_count=1, gt=10, plot_path=None):
     plt.figure(f"Initial distance for the first {frame_count} frames")
-    plt.axhline(gt, linestyle='dashed')
+    plt.axhline(gt, label='gt', linestyle='dashed')
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
 
         bl_trajs = trajs[bl]
         bl_data = data[bl]
-        first_frames = [run[run[:, FRAMEID] <= frame_count] for run in bl_data]
+        first_frames = [run[run[:, FRAMEID] == 1] for run in bl_data]
         tri_points = [run[run[:, TRI] == 1] for run in first_frames]
 
         points = [np.unique(run[:, POINTID]) for run in tri_points]
@@ -104,8 +106,15 @@ def initial_distance_per_baseline(data, trajs, frame_count=10, gt=20, plot_path=
                 world_frame_vector = rotate_vector(vector, [qx, qy, qz, qw])
 
                 distance = world_frame_vector[0] + x
-                plt.scatter(bl, distance, c='r')
-                
+                plt.scatter(BASELINES[bl], distance, c='r', alpha=0.5)
+    
+    plt.scatter(BASELINES[bl], distance, c='r', alpha=0.5, label='Triangulated points')
+    plt.legend()
+    
+    _, curr_max = plt.ylim()
+    plt.ylim(0, min(curr_max, 100))
+    plt.ylabel("Distance[m]")
+    plt.xlabel("Baseline[cm]")
     if plot_path:
         plt.savefig(os.path.join(plot_path, f"initial_distances_{frame_count}_frames.png"))
 
@@ -135,6 +144,76 @@ def initial_depth_per_baseline(data, frame_count=1, plot_path=None):
     plt.xlabel("Baseline[cm]")        
     if plot_path:
         plt.savefig(os.path.join(plot_path, f"initial_depths_{frame_count}_frames.png"))
+
+def initial_distance_distribution(data, traj, plot_path=None):
+    plt.figure(f"Initial distance distribution")
+
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+        
+        bl_trajs = traj[bl]
+        bl_data = data[bl]
+        first_frames = [run[run[:, FRAMEID] <= 1] for run in bl_data]
+
+        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+
+        dists = np.zeros((sum([element.shape[0] for element in tri_points])))
+
+        cnt = 0
+        for run_idx in range(len(bl_trajs)):
+            run_traj = bl_trajs[run_idx]
+            run_points = tri_points[run_idx]
+
+            for i in range(run_points.shape[0]):
+                point_data = run_points[i, :]
+                vector = point_data[[X, Y, Z]]
+                
+                # Find pose and rotate vector
+                frame_id = int(point_data[FRAMEID])
+                x, y, z, qx, qy, qz, qw  = run_traj[frame_id, 1:]
+                world_frame_vector = rotate_vector(vector, [qx, qy, qz, qw])
+
+                distance = world_frame_vector[0] + x
+                dists[cnt] = distance
+                cnt+=1
+
+        sns.distplot(dists, label=f"{BASELINES[bl]}cm", hist=False, norm_hist=True)
+
+
+    plt.axvline(20, label='gt', linestyle='dashed')
+    plt.xlim(10, 30)
+    plt.ylabel("Probability density")    
+    plt.xlabel("Distance triangulated")    
+    plt.legend()
+    plt.tight_layout()    
+    if plot_path:
+        plt.savefig(os.path.join(plot_path, f"initial_distance_disttribution.png"))
+
+def initial_depth_distribution(data, plot_path=None):
+    plt.figure(f"Initial depth distribution")
+
+    for bl in BASELINES.keys():
+        if bl not in data.keys():
+            continue
+        
+        bl_data = data[bl]
+        first_frames = [run[run[:, FRAMEID] <= 1] for run in bl_data]
+
+        tri_points = [run[run[:, TRI] == 1] for run in first_frames]
+
+        all_data = np.vstack((tri_points))
+
+        dists = all_data[:, DIST]
+
+        sns.distplot(dists, label=bl, hist=False)
+
+    plt.ylabel("Number")    
+    plt.xlabel("Depth triangulated")    
+    plt.legend()
+    plt.tight_layout()    
+    if plot_path:
+        plt.savefig(os.path.join(plot_path, f"initial_depth_disttribution.png"))
 
 
 def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True, errorbar=False):
@@ -228,8 +307,13 @@ if __name__ == "__main__":
         traj_data[bl] = bl_traj_data
     
     # Different plot functions to visualize the data
+    initial_distance_distribution(depth_data, traj_data, plot_path=None)    
+    initial_distance_per_baseline(depth_data, traj_data, 1, 20, plot_path=None)
+    plt.show()
+    """
+    initial_depth_distribution(depth_data, plot_path)    
     plot_depth_trajectory(depth_data, plot_path)
     plot_distance_trajectory(depth_data, traj_data, plot_path)
     initial_depth_per_baseline(depth_data, 1, plot_path)
-    initial_distance_per_baseline(depth_data, traj_data, 1, 25, plot_path)
     average_uncertainty_per_distance(depth_data, plot_path)
+    """

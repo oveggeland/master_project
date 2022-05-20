@@ -7,7 +7,7 @@
   <arg name="record" default="false" />
 
   <node pkg="rosbag" type="record" name="rosbag_record_poses"
-       args="-O /home/oveggeland/master_project/evo/bags/$(arg folder)/$(arg rovio_bag) /rovio/pose_with_covariance_stamped /rovio/pcl"
+       args="-O /home/oveggeland/master_project/evo/bags/$(arg folder)/$(arg rovio_bag) /rovio/pose_with_covariance_stamped /rovio/pcl /rovio/imu_biases"
        if="$(arg record)" />
 
   <node pkg="rovio" type="rovio_rosbag_loader" name="rovio" output="screen" required="true">

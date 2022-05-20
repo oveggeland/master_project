@@ -174,13 +174,9 @@ if __name__ == "__main__":
         all_data[bl] = bl_data
     
     # Different plot functions to visualize the data
-    yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
-    pos_errors_per_distance_traveled(all_data, plot_path)
+    #yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
+    #pos_errors_per_distance_traveled(all_data, plot_path)
     pos_errors(all_data, plot_path)
-
-    try:
-        height_errors(all_data, plot_path, sys.argv[2]) # Not good?
-    except:
-        height_errors(all_data, plot_path)
+    height_errors(all_data, plot_path, gt=13)
 
     plt.show()
