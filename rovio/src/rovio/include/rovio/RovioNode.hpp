@@ -186,6 +186,9 @@ class RovioNode{
   double cam0_offset_ = 0.0;                    //time offset added to camera 0 messages to sync with IMU images
   double cam1_offset_ = 0.0; 
 
+  // Oskar to enable initialization publish
+  bool firstImg_ = true;
+
   /** \brief Constructor
    */
   RovioNode(ros::NodeHandle& nh, ros::NodeHandle& nh_private, std::shared_ptr<mtFilter> mpFilter)
@@ -660,17 +663,20 @@ class RovioNode{
       int c2 = std::get<0>(mpFilter_->updateTimelineTuple_).measMap_.size();
       timing_T += (t2-t1)/cv::getTickFrequency()*1000;
       timing_C += c1-c2;
+
       bool plotTiming = false;
       if(plotTiming){
         ROS_INFO_STREAM(" == Filter Update: " << (t2-t1)/cv::getTickFrequency()*1000 << " ms for processing " << c1-c2 << " images, average: " << timing_T/timing_C);
       }
-      if(mpFilter_->safe_.t_ > oldSafeTime){ // Publish only if something changed
+
+      if(mpFilter_->safe_.t_ > oldSafeTime || firstImg_){ // Publish only if something changed, or on the first image!
         for(int i=0;i<mtState::nCam_;i++){
           if(!mpFilter_->safe_.img_[i].empty() && mpImgUpdate_->doFrameVisualisation_){
             cv::imshow("Tracker" + std::to_string(i), mpFilter_->safe_.img_[i]);
             cv::waitKey(3);
           }
         }
+
         if(!mpFilter_->safe_.patchDrawing_.empty() && mpImgUpdate_->visualizePatches_){
           cv::imshow("Patches", mpFilter_->safe_.patchDrawing_);
           cv::waitKey(3);
@@ -893,6 +899,12 @@ class RovioNode{
           const double stretchFactor = 3;
           for (unsigned int i=0;i<mtState::nMax_; i++, offset += pclMsg_.point_step) {
             if(filterState.fsm_.isValid_[i]){
+              // Oskar make sure the first feature is included!
+              if (firstImg_){
+                while(pubPcl_.getNumSubscribers() <= 0);
+                firstImg_ = false;
+              }
+
               // Get 3D feature coordinates.
               int camID = filterState.fsm_.features_[i].mpCoordinates_->camID_;
               distance = state.dep(i);
@@ -942,10 +954,11 @@ class RovioNode{
               // Add feature bearing vector and distance
               const Eigen::Vector3f bearing = featureOutputReadable_.bea().template cast<float>();
               const float distance = static_cast<float>(featureOutputReadable_.dis());
+
+              memcpy(&pclMsg_.data[offset + pclMsg_.fields[10].offset], &distance, sizeof(float)); // d
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[7].offset], &bearing[0], sizeof(float));  // x
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[8].offset], &bearing[1], sizeof(float));  // y
               memcpy(&pclMsg_.data[offset + pclMsg_.fields[9].offset], &bearing[2], sizeof(float));  // z
-              memcpy(&pclMsg_.data[offset + pclMsg_.fields[10].offset], &distance, sizeof(float)); // d
 
               // Add the corresponding covariance (upper triangular)
               Eigen::Matrix3f cov_MrMP = landmarkOutputCov_.cast<float>();
@@ -985,8 +998,10 @@ class RovioNode{
               }
             }
           }
-          pubPcl_.publish(pclMsg_);
-          pubMarkers_.publish(markerMsg_);
+          if (!firstImg_){
+            pubPcl_.publish(pclMsg_);
+            pubMarkers_.publish(markerMsg_);
+          }          
         }
         if(pubPatch_.getNumSubscribers() > 0 || forcePatchPublishing_){
           patchMsg_.header.seq = msgSeq_;
