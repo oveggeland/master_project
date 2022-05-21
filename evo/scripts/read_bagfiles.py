@@ -18,11 +18,16 @@ def create_depth_data(bagpath):
 
     bag = rosbag.Bag(bagpath)
 
+    stereo = not "mono" in bagpath
+
     # PCL values
     n_points = 25
-    point_step = 80
+    point_step = 76
     # [point_id, cam_id, cam0_st, cam1_st, d, d_cov, tri, x, y, z]
-    offsets = [0, 4, 12, 16, 44, 72, 76, 20, 24, 28]
+    if stereo:
+        offsets = [0, 4, 12, 16, 44, 72, 76, 20, 24, 28]
+    else:
+        offsets = [0, 4, 12, 12, 40, 68, 72, 16, 20, 24]
 
     frame_id = 0
     for _, msg, _ in bag.read_messages(topics=["/rovio/pcl"]):
@@ -46,45 +51,11 @@ def create_depth_data(bagpath):
         frame_id += 1
 
 
-def create_tf_file(bagpath, t0):
-    tf_path = os.path.join(EVO_PATH, "data", "tf", bagpath[:-4]+".json")
-
-    bag = rosbag.Bag(bagpath)
-
-    first = True
-    for _, msg, _ in bag.read_messages(topics=["/rovio/pose_with_covariance_stamped"]):
-        if first:
-            t0 += msg.header.stamp.to_sec()
-            first = False
-
-        if msg.header.stamp.to_sec() >= t0:
-            pos = msg.pose.pose.position
-            quat = msg.pose.pose.orientation
-            tf = {
-                'x':pos.x,
-                'y':pos.y,
-                'z':pos.z,
-                'qx':quat.x,
-                'qy':quat.y,
-                'qz':quat.z,
-                'qw':quat.w,
-            }
-
-            with open(tf_path, 'w') as outfile:
-                    json.dump(tf, outfile)
-
-            return tf_path
-
-
-def create_traj_data(bagpath, t0=None):
-    if not t0:
-        t0 = 0
+def create_traj_data(bagpath, rel_dir):
     # First create tf
-    tf_path = create_tf_file(bagpath, t0)
     traj_path = os.path.join(EVO_PATH, "data", "trajs", bagpath[:-4]+".txt")
 
     os.system(f"evo_traj bag {bagpath} /rovio/pose_with_covariance_stamped --save_as_tum")
-    #os.system(f"evo_traj bag {bagpath} /rovio/pose_with_covariance_stamped --transform_left {tf_path} --invert_transform --save_as_tum") # no need for the transform anymore:)
     os.system(f"mv rovio_pose_with_covariance_stamped.tum {traj_path}")
     
 
@@ -94,23 +65,14 @@ def read_folder_data(rel_dir):
     try_create_path(os.path.join(EVO_PATH, "data", "depths", rel_dir))
     #try_create_path(os.path.join(EVO_PATH, "data", "pcl", rel_dir))
     try_create_path(os.path.join(EVO_PATH, "data", "trajs", rel_dir))
-    try_create_path(os.path.join(EVO_PATH, "data", "tf", rel_dir))
 
-    # Read init_time from json file
-    json_file = glob.glob(os.path.join(rel_dir, "init_times.json"))
-    if len(json_file) > 0:
-        with open(json_file[0]) as f:
-            data = json.load(f)
-
-        print(data)
-        # Create depth and traj data
+    # Find bags in rel_dir
     bags = glob.glob(os.path.join(rel_dir, "*.bag"))
+    
+    # Create bag data
     for bag in bags:
-        try:
-            create_depth_data(bag)
-        except:
-            print("mono?")
-        create_traj_data(bag)
+        create_depth_data(bag)
+        create_traj_data(bag, rel_dir)
 
 
     # Recursively continue into subfolders

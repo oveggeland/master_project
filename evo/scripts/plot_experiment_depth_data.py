@@ -34,7 +34,7 @@ def plot_distance_trajectory(data, trajs, plot_path=None):
             run = bl_data[i]
             traj = bl_traj_data[i]
             # for each run, plot the trajectory of average depth estimates
-            n_frames = int(run[:, FRAMEID].max())
+            n_frames = int(run[:, FRAMEID].max()-1)
             distances = np.zeros(n_frames)
             for i in range(n_frames):
                 frame_data = run[run[:, FRAMEID] == i]
@@ -79,7 +79,7 @@ def plot_depth_trajectory(data, plot_path=None):
         if plot_path:
             plt.savefig(os.path.join(plot_path, bl, "depth_trajectory.png"))
 
-def initial_distance_per_baseline(data, trajs, gt=10, stereo=True, plot_path=None):
+def initial_distance_per_baseline(data, trajs, gt=10, stereo=False, plot_path=None):
     plt.figure(f"Initial distances from wall")
     plt.axhline(gt, label='gt', linestyle='dashed')
 
@@ -112,7 +112,7 @@ def initial_distance_per_baseline(data, trajs, gt=10, stereo=True, plot_path=Non
                 distance = world_frame_vector[0] + x
                 plt.scatter(BASELINES[bl], distance, c='r', alpha=0.5)
     
-    plt.scatter(BASELINES[bl], distance, c='r', alpha=0.5, label='Triangulated points')
+    plt.scatter(BASELINES[bl], distance, c='r', alpha=0.5, label='Initial points')
     plt.legend()
     
     _, curr_max = plt.ylim()
@@ -123,7 +123,7 @@ def initial_distance_per_baseline(data, trajs, gt=10, stereo=True, plot_path=Non
         plt.savefig(os.path.join(plot_path, f"initial_distances.png"))
 
 
-def initial_depth_per_baseline(data, stereo=True, plot_path=None):
+def initial_depth_per_baseline(data, stereo=False, plot_path=None):
     plt.figure(f"Initial depths")
 
     for bl in BASELINES.keys():
@@ -150,7 +150,7 @@ def initial_depth_per_baseline(data, stereo=True, plot_path=None):
     if plot_path:
         plt.savefig(os.path.join(plot_path, f"initial_depths.png"))
 
-def initial_distance_distribution(data, traj, gt=10, stereo=True, plot_path=None):
+def initial_distance_distribution(data, traj, gt=10, stereo=False, plot_path=None):
     plt.figure(f"Initial distance distribution")
 
     for bl in BASELINES.keys():
@@ -184,7 +184,7 @@ def initial_distance_distribution(data, traj, gt=10, stereo=True, plot_path=None
                 dists[cnt] = distance
                 cnt+=1
 
-        sns.distplot(dists, label=f"{BASELINES[bl]}cm", hist=False, norm_hist=True)
+        sns.distplot(dists, label=f"{BASELINES[bl]}cm", hist=False)
 
 
     plt.axvline(gt, label='gt', linestyle='dashed')
@@ -195,9 +195,9 @@ def initial_distance_distribution(data, traj, gt=10, stereo=True, plot_path=None
     plt.legend()
     plt.tight_layout()    
     if plot_path:
-        plt.savefig(os.path.join(plot_path, f"initial_distance_disttribution.png"))
+        plt.savefig(os.path.join(plot_path, f"initial_distance_distribution.png"))
 
-def initial_depth_distribution(data, stereo=True, plot_path=None):
+def initial_depth_distribution(data, stereo=False, plot_path=None):
     plt.figure(f"Initial depth distribution")
 
     for bl in BASELINES.keys():
@@ -214,14 +214,14 @@ def initial_depth_distribution(data, stereo=True, plot_path=None):
 
         dists = all_data[:, DIST]
 
-        sns.distplot(dists, label=bl, hist=False)
+        sns.distplot(dists, label=f"{BASELINES[bl]}cm", hist=False)
 
     plt.ylabel("Number")    
     plt.xlabel("Depth triangulated")    
     plt.legend()
     plt.tight_layout()    
     if plot_path:
-        plt.savefig(os.path.join(plot_path, f"initial_depth_disttribution.png"))
+        plt.savefig(os.path.join(plot_path, f"initial_depth_distribution.png"))
 
 
 def average_uncertainty_per_distance(data, plot_path=None, only_tri_points=True, errorbar=False):
@@ -321,10 +321,9 @@ if __name__ == "__main__":
     initial_depth_distribution(depth_data, stereo=False, plot_path=None)  
     initial_depth_per_baseline(depth_data, stereo=False, plot_path=None)  
 
-    plt.show()
-    """
-    plot_depth_trajectory(depth_data, plot_path)
+
+    plot_depth_trajectory(depth_data, plot_path=None)
     plot_distance_trajectory(depth_data, traj_data, plot_path)
 
-    average_uncertainty_per_distance(depth_data, plot_path)
-    """
+    #average_uncertainty_per_distance(depth_data, plot_path)
+    plt.show()

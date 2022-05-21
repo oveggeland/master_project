@@ -1,4 +1,6 @@
+from cProfile import label
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -18,7 +20,7 @@ def triangulation_errors(exp, color, alpha, frame_count=1):
         tri_points = [run[run[:, TRI] == 1] for run in first_frames]
 
         points = [np.unique(run[:, POINTID]) for run in tri_points]
-        print("Number of triangulated points are", sum([len(element) for element in points]), "for bl", bl)
+        print("Number of triangulated points for", exp, "is", sum([len(element) for element in points]), "for bl", bl)
 
         for run_idx in range(len(points)):
             run_data = tri_points[run_idx]
@@ -29,29 +31,52 @@ def triangulation_errors(exp, color, alpha, frame_count=1):
                 plt.scatter(BASELINES[bl], initial_depth, c=color, alpha=alpha)
     
 
-def height_errors(exp, color, alpha):
+def height_errors(exp, id=0, offset=0):
     data = read_traj_data(exp)
+
+    first = True
+    ticks = []
+
+    bl_vals = [BASELINES[bl] for bl in sorted(data.keys())]
+    seperators = np.diff(bl_vals)/2 + bl_vals[:-1]
+    for x in seperators:
+        plt.axvline(x)
 
     for bl in sorted(data.keys()):
         if bl not in BASELINES.keys():
             continue
+        ticks.append(BASELINES[bl])
 
         # Get traj lengths and final yaw values
         bl_data = data[bl]
-        print(bl_data)
         height_trajs = [run[:, 1] for run in bl_data]
 
-        max_height = [max(traj) for traj in height_trajs]
+        max_heights = [max(traj) for traj in height_trajs]
 
-        plt.scatter([BASELINES[bl] for _ in height_trajs], max_height, marker='_', s=1000, linewidth=5, c=color, alpha=alpha)
+        for height in max_heights:
+            if first:
+                plt.scatter(BASELINES[bl]+offset, height, marker='.', s=10, linewidth=5, c=COLORS[id], label=LABELS[id])
+                first = False
+            else:
+                plt.scatter(BASELINES[bl]+offset, height, marker='.', s=10, linewidth=5, c=COLORS[id])
 
+    plt.xticks(ticks)
 
-def pos_errors(exp, color, alpha):
+def pos_errors(exp, id=0, offset=0):
     data = read_traj_data(exp)
+
+    first = True
+    ticks = []
+
+    bl_vals = [BASELINES[bl] for bl in sorted(data.keys())]
+    seperators = np.diff(bl_vals)/2 + bl_vals[:-1]
+    for x in seperators:
+        plt.axvline(x)
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
+        ticks.append(BASELINES[bl])
 
         # Get traj lengths and final yaw values
         bl_data = data[bl]
@@ -61,7 +86,14 @@ def pos_errors(exp, color, alpha):
         abs_pos_errors = [np.linalg.norm(pos) for pos in final_pos_values]
 
         # Scatterplot of errors
-        plt.scatter([BASELINES[bl] for i in abs_pos_errors], abs_pos_errors, c=color, alpha=alpha, marker="_", s=1000, linewidth=5)
+        if first:
+            plt.scatter([BASELINES[bl]+offset for _ in abs_pos_errors], abs_pos_errors, c=COLORS[id], marker=".", s=10, linewidth=5, label=LABELS[id])
+            first=False
+        else:
+            plt.scatter([BASELINES[bl]+offset for _ in abs_pos_errors], abs_pos_errors, c=COLORS[id], marker=".", s=10, linewidth=5)
+
+    
+    plt.xticks(ticks)
 
 def compare_triangulation(exps):
     plt.figure("Compare triangulation depths")
@@ -85,16 +117,21 @@ def compare_triangulation(exps):
 def compare_heights(exps, gt):
     plt.figure("Compare height errors")
 
-    labels = []
-    for i, exp in enumerate(exps):
-        height_errors(exp, color=COLORS[i], alpha=1)
-        labels.append(mpatches.Patch(color=COLORS[i], label=LABELS[i]))
+    n = len(exps)
+    spread = 0.15*n
+    offsets = np.linspace(-spread, spread, len(exps))
 
-    plt.legend(handles=labels)
+    for i, exp in enumerate(exps):
+        height_errors(exp, id=i, offset=offsets[i])
+
+    plt.legend(loc='upper right')
 
     plt.axhline(gt, linestyle='dashed')
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Height from start[m]")
+
+    y_min, y_max = plt.ylim()
+    plt.ylim(max(0, y_min), min(y_max, 30))
 
     plt.tight_layout()
     plt.savefig(os.path.join(EVO_PATH, "compare", "heights", "_".join(exps)))
@@ -110,7 +147,7 @@ def compare_each_run(exps, bl='b6'):
         for run_id in range(len(data)):
             final_pos_val = data[run_id][-1, 1:4]
             pos_error = np.linalg.norm(final_pos_val)
-            plt.scatter(f"run {run_id+1}", pos_error, c=COLORS[i], marker="_", s=1000, linewidth=5)
+            plt.scatter(f"run {run_id+1}", pos_error, c=COLORS[i], s=1000, linewidth=5)
 
         labels.append(mpatches.Patch(color=COLORS[i], label=LABELS[i]))
 
@@ -123,21 +160,27 @@ def compare_each_run(exps, bl='b6'):
 def compare_pos_errors(exps):
     plt.figure("Compare position errors")
 
-    labels = []
+    n = len(exps)
+    spread = 0.15*n
+    offsets = np.linspace(-spread, spread, len(exps))
+
     for i, exp in enumerate(exps):
-        pos_errors(exp, color=COLORS[i], alpha=1)
-        labels.append(mpatches.Patch(color=COLORS[i], label=LABELS[i]))
-    plt.legend(handles=labels)
+        pos_errors(exp, offset=offsets[i], id=i)
+    
+    plt.legend(loc='upper right')
+
+    y_min, y_max = plt.ylim()
+    plt.ylim(max(0, y_min), min(y_max, 20))
 
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position error [m]")
-    
+
     plt.tight_layout()
     plt.savefig(os.path.join(EVO_PATH, "compare", "positions", "_".join(exps)))
 
 
 COLORS = ['b', 'g', 'r', 'c']
-LABELS = ['something', 'another thing', 'a new idea', 'the last option']
+LABELS = ['mono', 'stereo - no cross camera', 'stereo - with cross camera', 'the last option']
 
 if __name__ == "__main__":
     print("Compare two experiments")
@@ -151,10 +194,10 @@ if __name__ == "__main__":
         print("Please provide an experiment names")
         exit()
 
-    compare_heights(exps, gt=10)
+    compare_heights(exps, gt=13.5)
     compare_pos_errors(exps)
-    compare_triangulation(exps)
-    compare_each_run(exps, bl='b6')
+    #compare_triangulation(exps)
+    #compare_each_run(exps, bl='b6')
 
 
 

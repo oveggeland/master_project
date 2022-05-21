@@ -26,10 +26,12 @@ def get_final_yaw_value(run, deg=True):
 
 def yaw_errors_per_distance_traveled(data, plot_path, abs_errors=True):
     plt.figure("Yaw errors")
+    ticks = []
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
+        ticks.append(BASELINES[bl])
 
         # Get traj lengths and final yaw values
         bl_data = data[bl]
@@ -49,6 +51,7 @@ def yaw_errors_per_distance_traveled(data, plot_path, abs_errors=True):
         plt.errorbar(BASELINES[bl], avg_yaw_per_dist, std_yaw_per_dist, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_yaw_per_dist, marker='_', c='r')
 
+    plt.xticks(ticks)
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Yaw error per distance [deg/m]")
     plt.tight_layout()
@@ -57,10 +60,12 @@ def yaw_errors_per_distance_traveled(data, plot_path, abs_errors=True):
 
 def pos_errors_per_distance_traveled(data, plot_path):
     plt.figure("Position errors per distance traveled")
+    ticks = []
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
+        ticks.append(BASELINES[bl])
 
         # Get traj lengths and final yaw values
         bl_data = data[bl]
@@ -77,6 +82,7 @@ def pos_errors_per_distance_traveled(data, plot_path):
         plt.errorbar(BASELINES[bl], avg_pos_per_dist*100, std_pos_per_dist*100, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_pos_per_dist*100, marker='_', c='r')
 
+    plt.xticks(ticks)
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position per distance traveled [%]")
     plt.tight_layout()
@@ -85,11 +91,13 @@ def pos_errors_per_distance_traveled(data, plot_path):
 
 def pos_errors(data, plot_path):
     plt.figure("Position errors")
+    ticks = []
 
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
-
+        ticks.append(BASELINES[bl])
+        
         # Get traj lengths and final yaw values
         bl_data = data[bl]
         traj_lengths = [calculate_traj_length(run) for run in bl_data]
@@ -105,6 +113,7 @@ def pos_errors(data, plot_path):
         plt.errorbar(BASELINES[bl], avg_pos_error, std_pos_error, barsabove=True, c='r')
         plt.scatter(BASELINES[bl], avg_pos_error, marker='_', c='r')
 
+    plt.xticks(ticks)
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position error [m]")
     plt.tight_layout()
@@ -112,9 +121,13 @@ def pos_errors(data, plot_path):
         plt.savefig(os.path.join(plot_path, "pos_errors.png"))
 
 def height_errors(data, plot_path, gt=10):
+    plt.figure("Height errors")
+    ticks = []
+
     for bl in sorted(data.keys()):
         if bl not in BASELINES.keys():
             continue
+        ticks.append(BASELINES[bl])
 
         plt.figure("Height errors")
 
@@ -136,6 +149,7 @@ def height_errors(data, plot_path, gt=10):
 
     plt.plot([12.5, 25], [float(gt), float(gt)], linestyle='dashed')
 
+    plt.xticks(ticks)
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Y translation[m]")
     plt.tight_layout()
@@ -174,9 +188,9 @@ if __name__ == "__main__":
         all_data[bl] = bl_data
     
     # Different plot functions to visualize the data
-    #yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
-    #pos_errors_per_distance_traveled(all_data, plot_path)
+    yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
+    pos_errors_per_distance_traveled(all_data, plot_path)
     pos_errors(all_data, plot_path)
-    height_errors(all_data, plot_path, gt=13)
+    height_errors(all_data, plot_path, gt=13.5)
 
     plt.show()
