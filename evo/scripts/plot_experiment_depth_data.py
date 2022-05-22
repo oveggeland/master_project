@@ -277,8 +277,9 @@ if __name__ == "__main__":
     print("Plot experimental depth data...")
     try:
         exp = sys.argv[1]
+        height = int(sys.argv[2])
     except:
-        print("please provide an experiment folder")
+        print("please provide an experiment folder and a reference height")
         exit()
 
     traj_path = os.path.join(EVO_PATH, "data", "trajs", exp)
@@ -315,15 +316,14 @@ if __name__ == "__main__":
         traj_data[bl] = bl_traj_data
     
     # Different plot functions to visualize the data
-    initial_distance_distribution(depth_data, traj_data, gt=10, stereo=False, plot_path=None)    
-    initial_distance_per_baseline(depth_data, traj_data, gt=10, stereo=False, plot_path=None)
+    initial_distance_distribution(depth_data, traj_data, gt=height, stereo=False, plot_path=plot_path)    
+    initial_distance_per_baseline(depth_data, traj_data, gt=height, stereo=False, plot_path=plot_path)
     
-    initial_depth_distribution(depth_data, stereo=False, plot_path=None)  
-    initial_depth_per_baseline(depth_data, stereo=False, plot_path=None)  
+    initial_depth_distribution(depth_data, stereo=False, plot_path=plot_path)  
+    initial_depth_per_baseline(depth_data, stereo=False, plot_path=plot_path)  
 
-
-    plot_depth_trajectory(depth_data, plot_path=None)
+    plot_depth_trajectory(depth_data, plot_path=plot_path)
     plot_distance_trajectory(depth_data, traj_data, plot_path)
 
     #average_uncertainty_per_distance(depth_data, plot_path)
-    plt.show()
+    #plt.show()

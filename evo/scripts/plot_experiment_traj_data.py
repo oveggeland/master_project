@@ -161,8 +161,9 @@ if __name__ == "__main__":
     print("Plot experimental traj data...")
     try:
         exp = sys.argv[1]
+        height = int(sys.argv[2])
     except:
-        print("please provide an experiment folder")
+        print("please provide an experiment folder and a reference height")
         exit()
 
     data_path = os.path.join(EVO_PATH, "data", "trajs", exp)
@@ -191,6 +192,6 @@ if __name__ == "__main__":
     yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
     pos_errors_per_distance_traveled(all_data, plot_path)
     pos_errors(all_data, plot_path)
-    height_errors(all_data, plot_path, gt=13.5)
+    height_errors(all_data, plot_path, gt=height)
 
-    plt.show()
+    #plt.show()

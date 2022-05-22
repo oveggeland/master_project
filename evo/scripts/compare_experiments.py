@@ -183,18 +183,18 @@ COLORS = ['b', 'g', 'r', 'c']
 LABELS = ['mono', 'stereo - no cross camera', 'stereo - with cross camera', 'the last option']
 
 if __name__ == "__main__":
-    print("Compare two experiments")
-
     try:
-        exps = sys.argv[1:]
-        print(f"Comparing")
+        exps = sys.argv[1:-1]
+        height = float(sys.argv[-1])
+
+        print(f"Comparing:")
         for exp in exps:
-            print(exp)
+            print("\t", exp)
     except:
-        print("Please provide an experiment names")
+        print("Please provide at least one experiment name and a height reference")
         exit()
 
-    compare_heights(exps, gt=13.5)
+    compare_heights(exps, gt=height)
     compare_pos_errors(exps)
     #compare_triangulation(exps)
     #compare_each_run(exps, bl='b6')
