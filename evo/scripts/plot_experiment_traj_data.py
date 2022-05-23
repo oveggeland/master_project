@@ -161,7 +161,7 @@ if __name__ == "__main__":
     print("Plot experimental traj data...")
     try:
         exp = sys.argv[1]
-        height = int(sys.argv[2])
+        height = float(sys.argv[2])
     except:
         print("please provide an experiment folder and a reference height")
         exit()

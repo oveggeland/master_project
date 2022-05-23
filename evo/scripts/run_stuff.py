@@ -9,6 +9,10 @@ if __name__ == "__main__":
     all.append(list20)
     all.append(list25)
 
+    os.system("python3 ../../rovio/data/run_rovio.py main25 main20 main10")
+
+    """
+
     for name in list10:
         os.system(f"python3 full_pipeline.py {name} 10")
     
@@ -17,3 +21,5 @@ if __name__ == "__main__":
 
     for name in list25:
         os.system(f"python3 full_pipeline.py {name} 25")
+    
+    """
