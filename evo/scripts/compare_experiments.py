@@ -107,12 +107,15 @@ def pos_errors(exp, id=0, offset=0):
     
     plt.xticks(ticks)
 
-def compare_triangulation(exps):
+def compare_triangulation(exps, offset=True):
     plt.figure("Compare triangulation depths")
 
     n = len(exps)
-    spread = 0.15*n
-    offsets = np.linspace(-spread, spread, len(exps))
+    if offset:
+        spread = 0.15*n
+        offsets = np.linspace(-spread, spread, len(exps))
+    else:
+        offsets = [0]*n
 
     for i, exp in enumerate(exps):
         triangulation_errors(exp, id=i, offsets=offsets)
@@ -129,90 +132,125 @@ def compare_triangulation(exps):
     plt.savefig(os.path.join(EVO_PATH, "compare", "triangulation", "_".join(exps)))
 
 
-def compare_depth_parameter(exps):
-    ticks = []
+def compare_depth_parameter(exps, overall=True, markers=['main10', 'main20', 'main25']):
+    ticks = {}
 
-    heights = {}
     errors = {}
     avgs = {}
     stds = {}
     tri_count = {}
-    for i, exp in enumerate(exps):
-        traj_data = read_traj_data(exp)
-        pcl_data = read_pcl_data(exp)
-        init_depth = float(exp[-2:])
-        ticks.append(init_depth)
-        
-        for bl in BASELINES.keys():
-            if bl not in pcl_data.keys():
-                continue
-            bl_pcl_data = np.vstack(pcl_data[bl])
-            first_frame = bl_pcl_data[bl_pcl_data[:, FRAMEID] == 0]
-            first_frame = first_frame[first_frame[:, TRI] == 1]
 
-            depths = first_frame[:, DIST]
-            count = first_frame.shape[0]
+    labels = ['Initial distance = 10m', 'Initial distance = 20m', 'Initial distance = 25m']
+    for mark in markers:
+        mark_exps = [exp for exp in exps if mark in exp]
 
-            bl_traj_data = traj_data[bl]
-            avg_error = np.average([np.linalg.norm(run[0, [1, 2, 3]] - run[-1, [1, 2, 3]]) for run in bl_traj_data])
-        
+        errors[mark] = {}
+        avgs[mark] = {}
+        stds[mark] = {}
+        tri_count[mark] = {}
+        ticks[mark] = []
 
-            if bl not in avgs.keys():
-                avgs[bl] = [np.average(depths)]
-                stds[bl] = [np.std(depths)]
-                tri_count[bl] = [count]
-                errors[bl] = [avg_error]
-            else:
-                avgs[bl].append(np.average(depths))
-                stds[bl].append(np.std(depths))
-                tri_count[bl].append(count)
-                errors[bl].append(avg_error)
+       
+        for i, exp in enumerate(mark_exps):
+            traj_data = read_traj_data(exp)
+            pcl_data = read_pcl_data(exp)
+            init_depth = float(exp[-2:])
+            ticks[mark].append(init_depth)
+            
+            for bl in BASELINES.keys():
+                if bl not in pcl_data.keys():
+                    continue
+                bl_pcl_data = np.vstack(pcl_data[bl])
+                first_frame = bl_pcl_data[bl_pcl_data[:, FRAMEID] == 0]
+                first_frame = first_frame[first_frame[:, TRI] == 1]
+
+                depths = first_frame[:, DIST]
+                count = first_frame.shape[0]
+
+                bl_traj_data = traj_data[bl]
+                avg_error = np.average([np.linalg.norm(run[0, [1, 2, 3]] - run[-1, [1, 2, 3]]) for run in bl_traj_data])
+            
+
+                if bl not in avgs[mark].keys():
+                    avgs[mark][bl] = [np.average(depths)]
+                    stds[mark][bl] = [np.std(depths)]
+                    tri_count[mark][bl] = [count]
+                    errors[mark][bl] = [avg_error]
+                else:
+                    avgs[mark][bl].append(np.average(depths))
+                    stds[mark][bl].append(np.std(depths))
+                    tri_count[mark][bl].append(count)
+                    errors[mark][bl].append(avg_error)
     
+    all_ticks = np.hstack([ticks[mark] for mark in markers])
+    all_ticks = np.unique(all_ticks)
 
     plt.figure("Compare initial depths")
-    for i, bl in enumerate(avgs.keys()):
-        #plt.errorbar(ticks, avgs[bl], stds[bl], c=cmap(i))
-        plt.plot(ticks, avgs[bl], label=bl, linestyle='dashed')
+
+    for i, mark in enumerate(markers):
+        if not overall:
+            for i, bl in enumerate(avgs[mark].keys()):
+                #plt.errorbar(ticks[mark], avgs[mark][bl], stds[mark][bl])
+                plt.plot(ticks[mark], avgs[mark][bl], label=bl)
+        else:
+            tot_avg = np.average([avgs[mark][bl] for bl in avgs[mark].keys()], axis=0)
+            plt.plot(ticks[mark], tot_avg, label=labels[i], alpha=1, linewidth=2.5)
 
     plt.legend()
-    plt.xticks(ticks)
-    for tick in ticks:
-        plt.axvline(tick)
+    plt.xticks(all_ticks)
     plt.xlabel("Initial depth value[m]")
     plt.ylabel("Average initial depth[m]")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(EVO_PATH, "compare", "initial_depths_"+exps[0][:-2]))
+    if overall:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initial_depths_overall"))
+    else:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initial_depths_"+exps[0][:-2]))
 
 
     plt.figure("Compare number of triangulations")
-    for bl in avgs.keys():
-        plt.plot(ticks, tri_count[bl], label=bl)
+    for i, mark in enumerate(markers):
+        if not overall:
+            for i, bl in enumerate(tri_count[mark].keys()):
+                #plt.errorbar(ticks[mark], tri_count[bl], stds[bl])
+                plt.plot(ticks[mark], tri_count[mark][bl], label=bl)
+        else:
+            tot_avg = np.average([tri_count[mark][bl] for bl in tri_count[mark].keys()], axis=0)
+            plt.plot(ticks[mark], tot_avg, label=labels[i], alpha=1, linewidth=2.5)
 
     plt.legend()
-    plt.xticks(ticks)
+    plt.xticks(all_ticks)
     plt.xlabel("Initial depth value[m]")
     plt.ylabel("Number of triangulated features")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(EVO_PATH, "compare", "tri_count_"+exps[0][:-2]))
+    if overall:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "tri_count_overall"))
+    else:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "tri_count_"+exps[0][:-2]))
 
 
     plt.figure("Compare total errors")
-    for bl in avgs.keys():
-        plt.plot(ticks, errors[bl], label=bl, alpha=0.8, linestyle='dashed')
-    tot_avg = np.average([errors[bl] for bl in avgs.keys()], axis=0)
-    plt.plot(ticks, tot_avg, label="Overall average", alpha=1, linewidth=2.5, c='black')
+    for i, mark in enumerate(markers):
+        if not overall:
+            for i, bl in enumerate(errors[mark].keys()):
+                #plt.errorbar(ticks[mark], errors[bl], stds[bl])
+                plt.plot(ticks[mark], errors[mark][bl], label=bl)
+        else:
+            tot_avg = np.average([errors[mark][bl] for bl in errors[mark].keys()], axis=0)
+            plt.plot(ticks[mark], tot_avg, label=labels[i], alpha=1, linewidth=2.5)
 
     plt.legend()
-    plt.xticks(ticks)
+    plt.xticks(all_ticks)
     plt.xlabel("Initial depth value[m]")
     plt.ylabel("Total position error[m]")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(EVO_PATH, "compare", "pos_error_"+exps[0][:-2]))
 
-
+    if overall:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "pos_error_overall"))
+    else:
+        plt.savefig(os.path.join(EVO_PATH, "compare", "pos_error_"+exps[0][:-2]))
 
 
 def compare_heights(exps, gt):
@@ -280,8 +318,8 @@ def compare_pos_errors(exps):
     plt.savefig(os.path.join(EVO_PATH, "compare", "positions", "_".join(exps)))
 
 
-COLORS = ['b', 'g', 'r', 'c']
-LABELS = ['mono', 'stereo - no cross camera', 'stereo - with cross camera', 'the last option']
+COLORS = ['b', 'r', 'g', 'c']
+LABELS = ['Without init movement', 'With init movement', 'With init movement, depth=2m', 'With init movement, depth=20m']
 
 if __name__ == "__main__":
     try:
@@ -290,7 +328,7 @@ if __name__ == "__main__":
         try:
             height = float(sys.argv[-1])
         except:
-            height = 10
+            height = 9
             exps.append(sys.argv[-1])
 
         print(f"Comparing:")
@@ -302,10 +340,10 @@ if __name__ == "__main__":
 
     #compare_heights(exps, gt=height)
     #compare_pos_errors(exps)
-    #compare_triangulation(exps)
+    #compare_triangulation(exps, offset=False)
     #compare_each_run(exps, bl='b6')
 
-    compare_depth_parameter(exps)
+    compare_depth_parameter(exps, overall=False, markers=['main25'])
 
 
 

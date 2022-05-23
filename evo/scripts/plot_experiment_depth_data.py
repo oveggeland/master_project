@@ -275,8 +275,8 @@ if __name__ == "__main__":
     initial_depth_distribution(depth_data, stereo=False, plot_path=plot_path)  
     initial_depth_per_baseline(depth_data, stereo=False, plot_path=plot_path)  
 
-    plot_depth_trajectory(depth_data, plot_path=plot_path)
-    plot_distance_trajectory(depth_data, traj_data, plot_path)
+    #plot_depth_trajectory(depth_data, plot_path=plot_path)
+    #plot_distance_trajectory(depth_data, traj_data, plot_path)
 
     plt.show()
 

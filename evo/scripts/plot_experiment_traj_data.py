@@ -89,14 +89,18 @@ def pos_errors_per_distance_traveled(data, plot_path):
     if plot_path:
         plt.savefig(os.path.join(plot_path, "pos_errors_per_distance_traveled.png"))
 
-def pos_errors(data, plot_path):
+def pos_errors(data, plot_path, avg=False):
     plt.figure("Position errors")
     ticks = []
 
+    bls = []
+    avgs = []
+    stds = []
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
         ticks.append(BASELINES[bl])
+        bls.append(BASELINES[bl])
         
         # Get traj lengths and final yaw values
         bl_data = data[bl]
@@ -109,16 +113,32 @@ def pos_errors(data, plot_path):
         std_pos_error = np.std(abs_pos_errors)
 
         # Scatter and errorbar
-        plt.scatter([BASELINES[bl] for i in abs_pos_errors], abs_pos_errors)
-        plt.errorbar(BASELINES[bl], avg_pos_error, std_pos_error, barsabove=True, c='r')
-        plt.scatter(BASELINES[bl], avg_pos_error, marker='_', c='r')
+        if not avg:
+            plt.scatter([BASELINES[bl] for i in abs_pos_errors], abs_pos_errors)
+            plt.errorbar(BASELINES[bl], avg_pos_error, std_pos_error, barsabove=True, c='r')
+            plt.scatter(BASELINES[bl], avg_pos_error, marker='_', c='r')
+            
+        else:
+            avgs.append(avg_pos_error)
+            stds.append(std_pos_error)
+
+    if avg:
+        plt.figure("Average position errors")
+        plt.plot(bls, avgs, 'or', label="Average error")
+        plt.plot(bls, avgs, c='black')
+        plt.fill_between(bls, np.subtract(avgs, stds), np.add(avgs, stds),
+                 color='gray', alpha=0.2, label="Standard deviation")
+        plt.legend()
 
     plt.xticks(ticks)
     plt.xlabel("Baseline[cm]")
     plt.ylabel("Final position error [m]")
     plt.tight_layout()
     if plot_path:
-        plt.savefig(os.path.join(plot_path, "pos_errors.png"))
+        if avg:
+            plt.savefig(os.path.join(plot_path, "avg_pos_errors.png"))
+        else:
+            plt.savefig(os.path.join(plot_path, "pos_errors.png"))
 
 def height_errors(data, plot_path, gt=10):
     plt.figure("Height errors")
@@ -189,9 +209,10 @@ if __name__ == "__main__":
         all_data[bl] = bl_data
     
     # Different plot functions to visualize the data
-    yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
-    pos_errors_per_distance_traveled(all_data, plot_path)
-    pos_errors(all_data, plot_path)
-    height_errors(all_data, plot_path, gt=height)
+    #yaw_errors_per_distance_traveled(all_data, plot_path, abs_errors=True)
+    #pos_errors_per_distance_traveled(all_data, plot_path)
+    pos_errors(all_data, plot_path, avg=True)
+    pos_errors(all_data, plot_path, avg=False)
+    #height_errors(all_data, plot_path, gt=height)
 
-    #plt.show()
+    plt.show()
