@@ -74,7 +74,7 @@ def height_errors(exp, id=0, offset=0):
 
     plt.xticks(ticks)
 
-def pos_errors(exp, id=0, offset=0):
+def pos_errors(exp, id=0, offset=0, average=False):
     data = read_traj_data(exp)
 
     first = True
@@ -84,7 +84,12 @@ def pos_errors(exp, id=0, offset=0):
     seperators = np.diff(bl_vals)/2 + bl_vals[:-1]
     for x in seperators:
         plt.axvline(x)
+    
+    if average:
+        plt.axvline(seperators[-1]+2.5)
 
+    errors = 0
+    cnt = 0
     for bl in BASELINES.keys():
         if bl not in data.keys():
             continue
@@ -96,6 +101,8 @@ def pos_errors(exp, id=0, offset=0):
 
         # Per distance errors, with average and std
         abs_pos_errors = [np.linalg.norm(pos) for pos in final_pos_values]
+        errors += sum(abs_pos_errors)
+        cnt += len(abs_pos_errors)
 
         # Scatterplot of errors
         if first:
@@ -104,8 +111,9 @@ def pos_errors(exp, id=0, offset=0):
         else:
             plt.scatter([BASELINES[bl]+offset for _ in abs_pos_errors], abs_pos_errors, c=COLORS[id], marker=".", s=10, linewidth=5)
 
-    
     plt.xticks(ticks)
+    if average:
+        plt.scatter(max(plt.xticks()[0])+2.5, errors/cnt, marker="_", c=COLORS[id], s=1000, linewidth=5)
 
 def compare_triangulation(exps, offset=True):
     plt.figure("Compare triangulation depths")
@@ -203,9 +211,9 @@ def compare_depth_parameter(exps, overall=True, markers=['main10', 'main20', 'ma
 
     plt.tight_layout()
     if overall:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "initial_depths_overall"))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "initial_depths_overall"))
     else:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "initial_depths_"+exps[0][:-2]))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "initial_depths_"+exps[0][:-2]))
 
 
     plt.figure("Compare number of triangulations")
@@ -225,9 +233,9 @@ def compare_depth_parameter(exps, overall=True, markers=['main10', 'main20', 'ma
 
     plt.tight_layout()
     if overall:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "tri_count_overall"))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "tri_count_overall"))
     else:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "tri_count_"+exps[0][:-2]))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "tri_count_"+exps[0][:-2]))
 
 
     plt.figure("Compare total errors")
@@ -248,9 +256,9 @@ def compare_depth_parameter(exps, overall=True, markers=['main10', 'main20', 'ma
     plt.tight_layout()
 
     if overall:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "pos_error_overall"))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "pos_error_overall"))
     else:
-        plt.savefig(os.path.join(EVO_PATH, "compare", "pos_error_"+exps[0][:-2]))
+        plt.savefig(os.path.join(EVO_PATH, "compare", "initdepth", "pos_error_"+exps[0][:-2]))
 
 
 def compare_heights(exps, gt):
@@ -279,24 +287,36 @@ def compare_heights(exps, gt):
 def compare_each_run(exps, bl='b6'):
     plt.figure("Compare position errors for each run")
 
+
     labels = []
+
+    avgs = []
     for i, exp in enumerate(exps):
         data = read_traj_data(exp)[bl]
 
+        cnt = 0
+        sum = 0
         for run_id in range(len(data)):
             final_pos_val = data[run_id][-1, 1:4]
             pos_error = np.linalg.norm(final_pos_val)
-            plt.scatter(f"run {run_id+1}", pos_error, c=COLORS[i], s=1000, linewidth=5)
+            sum += pos_error
+            plt.scatter(f"run {run_id+1}", pos_error, marker="_", c=COLORS[i], s=1000, linewidth=5, alpha=0.8)
+            cnt += 1
 
+        avgs.append(sum/cnt)
         labels.append(mpatches.Patch(color=COLORS[i], label=LABELS[i]))
+
+    plt.axvline(len(plt.xticks()[0])-0.5)
+    for i in range(len(avgs)):
+        plt.scatter(f"Average", avgs[i], marker="_", c=COLORS[i], s=1000, linewidth=5, alpha=0.8)
 
     plt.legend(handles=labels)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(EVO_PATH, "compare", "positions", "_".join(exps)))
+    plt.savefig(os.path.join(EVO_PATH, "compare", "runs", "_".join(exps)))
 
 
-def compare_pos_errors(exps):
+def compare_pos_errors(exps, average=False):
     plt.figure("Compare position errors")
 
     n = len(exps)
@@ -304,8 +324,18 @@ def compare_pos_errors(exps):
     offsets = np.linspace(-spread, spread, len(exps))
 
     for i, exp in enumerate(exps):
-        pos_errors(exp, offset=offsets[i], id=i)
+        pos_errors(exp, offset=offsets[i], id=i, average=average)
     
+    if average:
+        ticks = list(plt.xticks()[0])
+        x_val = max(ticks)+2.5
+        ticks.append(x_val)
+        labels = [str(item) for item in ticks]
+        labels[-1] = 'Average'   
+    
+        plt.xticks(ticks, labels)
+
+
     plt.legend(loc='upper right')
 
     y_min, y_max = plt.ylim()
@@ -319,7 +349,7 @@ def compare_pos_errors(exps):
 
 
 COLORS = ['b', 'r', 'g', 'c']
-LABELS = ['Without init movement', 'With init movement', 'With init movement, depth=2m', 'With init movement, depth=20m']
+LABELS = ['Benchmark', 'Outlier detection', 'Kalman update', 'With init movement, depth=20m']
 
 if __name__ == "__main__":
     try:
@@ -339,11 +369,11 @@ if __name__ == "__main__":
         exit()
 
     #compare_heights(exps, gt=height)
-    #compare_pos_errors(exps)
+    compare_pos_errors(exps, average=False)
     #compare_triangulation(exps, offset=False)
-    #compare_each_run(exps, bl='b6')
+    compare_each_run(exps, bl='b6')
 
-    compare_depth_parameter(exps, overall=False, markers=['main25'])
+    #compare_depth_parameter(exps, overall=False, markers=['main25'])
 
 
 
